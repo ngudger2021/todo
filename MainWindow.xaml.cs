@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Globalization;
 using System.Windows.Input;
 using TodoWpfApp.Models;
 
@@ -46,6 +47,7 @@ namespace TodoWpfApp
                 _tasksView.Refresh();
             }
 
+            RefreshTagFilterOptions();
             LoadReminderSettings();
             ApplyReminderSettingsToUi();
         }
@@ -59,9 +61,32 @@ namespace TodoWpfApp
         {
             if (obj is not TaskItem task)
                 return false;
-            var filterItem = FilterComboBox.SelectedItem as ComboBoxItem;
-            var filter = filterItem?.Content?.ToString() ?? "All";
-            return filter == "All" || (filter == "Pending" && !task.Completed) || (filter == "Completed" && task.Completed);
+            string filter = (StatusFilterComboBox?.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All";
+            if (!(filter == "All" || (filter == "Pending" && !task.Completed) || (filter == "Completed" && task.Completed)))
+            {
+                return false;
+            }
+
+            string selectedTag = TagFilterComboBox?.SelectedItem as string ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(selectedTag) && selectedTag != "All tags" && !task.Tags.Any(t => string.Equals(t, selectedTag, StringComparison.OrdinalIgnoreCase)))
+            {
+                return false;
+            }
+
+            string search = SearchTextBox?.Text?.Trim() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var comparison = StringComparison.OrdinalIgnoreCase;
+                bool matches = (task.Title?.IndexOf(search, comparison) >= 0)
+                    || (task.Description?.IndexOf(search, comparison) >= 0)
+                    || task.Tags.Any(t => t.IndexOf(search, comparison) >= 0);
+                if (!matches)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -92,7 +117,9 @@ namespace TodoWpfApp
                             foreach (var st in t.SubTasks)
                             {
                                 st.Attachments ??= new List<string>();
+                                st.Tags ??= new List<string>();
                             }
+                            t.Tags ??= new List<string>();
                             _tasks.Add(t);
                         }
                     }
@@ -184,11 +211,6 @@ namespace TodoWpfApp
             SaveReminderSettings();
         }
 
-        private void FilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            _tasksView?.Refresh();
-        }
-
         private void TasksGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             UpdateDetails();
@@ -206,6 +228,7 @@ namespace TodoWpfApp
                 DescriptionText.Visibility = Visibility.Visible;
                 DescriptionMarkdown.Visibility = Visibility.Collapsed;
                 AttachmentsPanel.Children.Clear();
+                TagsPanel.Children.Clear();
                 SubtasksDetailsPanel.ItemsSource = null;
                 return;
             }
@@ -249,6 +272,26 @@ namespace TodoWpfApp
             {
                 var noLbl = new TextBlock { Text = "No attachments" };
                 AttachmentsPanel.Children.Add(noLbl);
+            }
+            // Tags
+            TagsPanel.Children.Clear();
+            if (task.Tags.Count > 0)
+            {
+                foreach (var tag in task.Tags)
+                {
+                    TagsPanel.Children.Add(new Border
+                    {
+                        Background = System.Windows.Media.Brushes.LightGray,
+                        CornerRadius = new CornerRadius(3),
+                        Padding = new Thickness(5, 2, 5, 2),
+                        Margin = new Thickness(0, 0, 5, 5),
+                        Child = new TextBlock { Text = tag }
+                    });
+                }
+            }
+            else
+            {
+                TagsPanel.Children.Add(new TextBlock { Text = "No tags" });
             }
             // Subtasks
             if (task.SubTasks != null && task.SubTasks.Count > 0)
@@ -294,6 +337,7 @@ namespace TodoWpfApp
             {
                 SaveTasks();
                 _tasksView?.Refresh();
+                RefreshTagFilterOptions();
             }
         }
 
@@ -311,6 +355,7 @@ namespace TodoWpfApp
                 SaveTasks();
                 _tasksView?.Refresh();
                 UpdateDetails();
+                RefreshTagFilterOptions();
             }
         }
 
@@ -398,6 +443,7 @@ namespace TodoWpfApp
             _tasks.Remove(task);
             SaveTasks();
             _tasksView?.Refresh();
+            RefreshTagFilterOptions();
             UpdateDetails();
         }
 
@@ -424,6 +470,92 @@ namespace TodoWpfApp
                 UpdateReminderSettingsFromUi();
                 e.Handled = true;
             }
+        }
+
+        private void FilterBar_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            _tasksView?.Refresh();
+        }
+
+        private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            _tasksView?.Refresh();
+        }
+
+        private void RefreshTagFilterOptions()
+        {
+            if (TagFilterComboBox == null)
+                return;
+
+            var selected = TagFilterComboBox.SelectedItem as string;
+            TagFilterComboBox.Items.Clear();
+            TagFilterComboBox.Items.Add("All tags");
+            var tags = _tasks
+                .SelectMany(t => t.Tags ?? new List<string>())
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(t => t)
+                .ToList();
+            foreach (var tag in tags)
+            {
+                TagFilterComboBox.Items.Add(tag);
+            }
+
+            if (selected != null && TagFilterComboBox.Items.Contains(selected))
+            {
+                TagFilterComboBox.SelectedItem = selected;
+            }
+            else
+            {
+                TagFilterComboBox.SelectedIndex = 0;
+            }
+        }
+
+        private void GroupByComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_tasksView == null || GroupByComboBox == null)
+                return;
+
+            _tasksView.GroupDescriptions.Clear();
+            var selection = (GroupByComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
+            if (selection == "Due Date")
+            {
+                _tasksView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(TaskItem.DueDate), new DueDateGroupConverter()));
+            }
+            else if (selection == "Tag")
+            {
+                _tasksView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(TaskItem.Tags), new TagGroupConverter()));
+            }
+
+            _tasksView.Refresh();
+        }
+
+        private class DueDateGroupConverter : IValueConverter
+        {
+            public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            {
+                if (value is DateTime dt)
+                {
+                    return dt.Date.ToShortDateString();
+                }
+                return "No due date";
+            }
+
+            public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+        }
+
+        private class TagGroupConverter : IValueConverter
+        {
+            public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            {
+                if (value is List<string> tags && tags.Count > 0)
+                {
+                    return tags[0];
+                }
+                return "No tags";
+            }
+
+            public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
         }
     }
 }

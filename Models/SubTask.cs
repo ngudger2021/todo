@@ -1,5 +1,7 @@
-using System.Text.Json.Serialization;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Text.Json.Serialization;
 
 namespace TodoWpfApp.Models
 {
@@ -16,6 +18,7 @@ namespace TodoWpfApp.Models
         private DateTime? _dueDate;
         private string _priority = "Medium";
         private bool _isMarkdown;
+        private List<string> _tags = new();
 
         /// <summary>
         /// Title of the subtask.  This should be a short summary of what needs to be done.
@@ -130,6 +133,21 @@ namespace TodoWpfApp.Models
                     _isMarkdown = value;
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsMarkdown)));
                 }
+            }
+        }
+
+        /// <summary>
+        /// Tags that categorise the subtask.  Optional but always initialised to an empty list
+        /// to simplify filtering and display logic.
+        /// </summary>
+        [JsonPropertyName("tags")]
+        public List<string> Tags
+        {
+            get => _tags;
+            set
+            {
+                _tags = value ?? new List<string>();
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Tags)));
             }
         }
 
