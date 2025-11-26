@@ -22,6 +22,10 @@ namespace TodoWpfApp
         private ICollectionView? _tasksView;
         private const string DataFile = "todo_data.json";
         private const string AttachmentsDir = "attachments";
+        private const string SettingsFile = "user_settings.json";
+        private ReminderSettings _reminderSettings = ReminderSettings.CreateDefault();
+
+        public ObservableCollection<TaskItem> Tasks => _tasks;
 
         public MainWindow()
         {
@@ -41,7 +45,12 @@ namespace TodoWpfApp
                 _tasksView.SortDescriptions.Add(new SortDescription(nameof(TaskItem.DueDate), ListSortDirection.Ascending));
                 _tasksView.Refresh();
             }
+
+            LoadReminderSettings();
+            ApplyReminderSettingsToUi();
         }
+
+        public ReminderSettings GetReminderSettings() => _reminderSettings;
 
         /// <summary>
         /// Predicate for filtering tasks based on the selected filter option.
@@ -111,6 +120,68 @@ namespace TodoWpfApp
             {
                 // optionally notify user of save error
             }
+        }
+
+        private void LoadReminderSettings()
+        {
+            var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, SettingsFile);
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    var json = File.ReadAllText(filePath);
+                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    var loaded = JsonSerializer.Deserialize<ReminderSettings>(json, options);
+                    if (loaded != null)
+                    {
+                        _reminderSettings = loaded;
+                    }
+                }
+            }
+            catch
+            {
+                _reminderSettings = ReminderSettings.CreateDefault();
+            }
+
+            if (_reminderSettings.LeadTimeHours <= 0)
+            {
+                _reminderSettings.LeadTimeHours = 24;
+            }
+        }
+
+        private void SaveReminderSettings()
+        {
+            try
+            {
+                var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, SettingsFile);
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                var json = JsonSerializer.Serialize(_reminderSettings, options);
+                File.WriteAllText(filePath, json);
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
+        private void ApplyReminderSettingsToUi()
+        {
+            ReminderToggle.IsChecked = _reminderSettings.RemindersEnabled;
+            ReminderLeadTimeTextBox.Text = _reminderSettings.LeadTimeHours.ToString();
+        }
+
+        private void UpdateReminderSettingsFromUi()
+        {
+            var leadText = ReminderLeadTimeTextBox.Text;
+            if (!int.TryParse(leadText, out var leadHours) || leadHours <= 0)
+            {
+                leadHours = _reminderSettings.LeadTimeHours;
+            }
+
+            _reminderSettings.RemindersEnabled = ReminderToggle.IsChecked == true;
+            _reminderSettings.LeadTimeHours = leadHours;
+            ReminderLeadTimeTextBox.Text = leadHours.ToString();
+            SaveReminderSettings();
         }
 
         private void FilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -334,6 +405,25 @@ namespace TodoWpfApp
         {
             // Persist subtask state changes immediately
             SaveTasks();
+        }
+
+        private void ReminderToggle_Changed(object sender, RoutedEventArgs e)
+        {
+            UpdateReminderSettingsFromUi();
+        }
+
+        private void ReminderLeadTimeTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            UpdateReminderSettingsFromUi();
+        }
+
+        private void ReminderLeadTimeTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                UpdateReminderSettingsFromUi();
+                e.Handled = true;
+            }
         }
     }
 }
