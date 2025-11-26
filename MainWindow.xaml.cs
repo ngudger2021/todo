@@ -37,6 +37,9 @@ namespace TodoWpfApp
             if (_tasksView != null)
             {
                 _tasksView.Filter = TaskFilter;
+                _tasksView.SortDescriptions.Clear();
+                _tasksView.SortDescriptions.Add(new SortDescription(nameof(TaskItem.DueDate), ListSortDirection.Ascending));
+                _tasksView.Refresh();
             }
         }
 
