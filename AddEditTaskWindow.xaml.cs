@@ -28,12 +28,14 @@ namespace TodoWpfApp
             InitializeComponent();
             _existingTask = task;
             _allTasks = allTasks;
+            Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AttachmentsDir));
             if (task != null)
             {
                 Title = "Edit Task";
                 TitleTextBox.Text = task.Title;
                 DescriptionTextBox.Text = task.Description;
-                TagsTextBox.Text = task.Tags.Count == 0 ? string.Empty : string.Join(", ", task.Tags);
+                var existingTags = task.Tags ?? new List<string>();
+                TagsTextBox.Text = existingTags.Count == 0 ? string.Empty : string.Join(", ", existingTags);
                 if (task.DueDate.HasValue)
                     DueDatePicker.SelectedDate = task.DueDate.Value;
                 foreach (ComboBoxItem item in PriorityComboBox.Items)
