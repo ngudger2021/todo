@@ -341,8 +341,17 @@ namespace TodoWpfApp
         private void UpdateRecurrenceControlsEnabled(RecurrenceType recurrenceType)
         {
             bool enabled = recurrenceType != RecurrenceType.None;
-            RecurrenceIntervalTextBox.IsEnabled = enabled;
-            RecursUntilDatePicker.IsEnabled = enabled;
+            // Controls can be null during window initialization when the selection changed
+            // event fires before all named elements are wired up. Guard the access to avoid
+            // a spurious NullReferenceException.
+            if (RecurrenceIntervalTextBox != null)
+            {
+                RecurrenceIntervalTextBox.IsEnabled = enabled;
+            }
+            if (RecursUntilDatePicker != null)
+            {
+                RecursUntilDatePicker.IsEnabled = enabled;
+            }
         }
     }
 }
