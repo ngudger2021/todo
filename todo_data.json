@@ -7,6 +7,9 @@
     "priority": "Medium",
     "completed": false,
     "is_markdown": true,
+    "recurrence_type": "None",
+    "recurrence_interval": 1,
+    "recurs_until": null,
     "attachments": [],
     "subtasks": [
       {
@@ -28,6 +31,9 @@
     "priority": "Low",
     "completed": false,
     "is_markdown": false,
+    "recurrence_type": "None",
+    "recurrence_interval": 1,
+    "recurs_until": null,
     "attachments": [],
     "subtasks": []
   }

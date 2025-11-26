@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -113,6 +114,7 @@ namespace TodoWpfApp
                     {
                         PropertyNameCaseInsensitive = true,
                     };
+                    options.Converters.Add(new JsonStringEnumConverter());
                     var loaded = JsonSerializer.Deserialize<List<TaskItem>>(json, options);
                     if (loaded != null)
                     {
@@ -127,6 +129,10 @@ namespace TodoWpfApp
                                 st.Tags ??= new List<string>();
                             }
                             t.Tags ??= new List<string>();
+                            if (t.RecurrenceInterval <= 0)
+                            {
+                                t.RecurrenceInterval = 1;
+                            }
                             _tasks.Add(t);
                         }
                     }
@@ -147,6 +153,7 @@ namespace TodoWpfApp
             {
                 var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DataFile);
                 var options = new JsonSerializerOptions { WriteIndented = true };
+                options.Converters.Add(new JsonStringEnumConverter());
                 string json = JsonSerializer.Serialize(_tasks, options);
                 File.WriteAllText(filePath, json);
             }
@@ -376,6 +383,11 @@ namespace TodoWpfApp
             if (!task.Completed)
             {
                 task.Completed = true;
+                var nextTask = CreateNextRecurringInstance(task);
+                if (nextTask != null)
+                {
+                    _tasks.Add(nextTask);
+                }
                 SaveTasks();
                 _tasksView?.Refresh();
                 UpdateDetails();
@@ -544,6 +556,63 @@ namespace TodoWpfApp
             }
 
             _tasksView.Refresh();
+        }
+
+        private TaskItem? CreateNextRecurringInstance(TaskItem task)
+        {
+            if (task.RecurrenceType == RecurrenceType.None || !task.DueDate.HasValue)
+            {
+                return null;
+            }
+
+            int interval = Math.Max(1, task.RecurrenceInterval);
+            DateTime nextDue = task.DueDate.Value;
+            try
+            {
+                nextDue = task.RecurrenceType switch
+                {
+                    RecurrenceType.Daily => nextDue.AddDays(interval),
+                    RecurrenceType.Weekly => nextDue.AddDays(7 * interval),
+                    RecurrenceType.Monthly => nextDue.AddMonths(interval),
+                    _ => nextDue
+                };
+            }
+            catch
+            {
+                return null;
+            }
+
+            if (task.RecursUntil.HasValue && nextDue.Date > task.RecursUntil.Value.Date)
+            {
+                return null;
+            }
+
+            return new TaskItem
+            {
+                Id = Guid.NewGuid(),
+                Title = task.Title,
+                Description = task.Description,
+                DueDate = nextDue,
+                Priority = task.Priority,
+                Completed = false,
+                IsMarkdown = task.IsMarkdown,
+                Attachments = new List<string>(task.Attachments ?? new List<string>()),
+                SubTasks = task.SubTasks.Select(st => new SubTask
+                {
+                    Title = st.Title,
+                    Description = st.Description,
+                    Completed = false,
+                    DueDate = st.DueDate,
+                    Priority = st.Priority,
+                    Attachments = new List<string>(st.Attachments ?? new List<string>()),
+                    IsMarkdown = st.IsMarkdown,
+                    Tags = new List<string>(st.Tags ?? new List<string>())
+                }).ToList(),
+                Tags = new List<string>(task.Tags ?? new List<string>()),
+                RecurrenceType = task.RecurrenceType,
+                RecurrenceInterval = interval,
+                RecursUntil = task.RecursUntil
+            };
         }
 
         private class DueDateGroupConverter : IValueConverter
