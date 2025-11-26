@@ -131,12 +131,28 @@ namespace TodoWpfApp
             if (TasksGrid.SelectedItem is not TaskItem task)
             {
                 DescriptionText.Text = string.Empty;
+                DescriptionMarkdown.Markdown = string.Empty;
+                DescriptionText.Visibility = Visibility.Visible;
+                DescriptionMarkdown.Visibility = Visibility.Collapsed;
                 AttachmentsPanel.Children.Clear();
                 SubtasksDetailsPanel.ItemsSource = null;
                 return;
             }
             // Description
-            DescriptionText.Text = string.IsNullOrWhiteSpace(task.Description) ? "No description" : task.Description;
+            bool isMarkdown = task.IsMarkdown;
+            string description = string.IsNullOrWhiteSpace(task.Description) ? "No description" : task.Description;
+            if (isMarkdown)
+            {
+                DescriptionMarkdown.Markdown = description;
+                DescriptionMarkdown.Visibility = Visibility.Visible;
+                DescriptionText.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                DescriptionText.Text = description;
+                DescriptionText.Visibility = Visibility.Visible;
+                DescriptionMarkdown.Visibility = Visibility.Collapsed;
+            }
             // Attachments
             AttachmentsPanel.Children.Clear();
             if (task.Attachments.Count > 0)

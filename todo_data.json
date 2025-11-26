@@ -1,0 +1,34 @@
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000001",
+    "title": "Markdown example",
+    "description": "# Welcome to Markdown\n\nThis description is rendered with **Markdown** formatting.",
+    "due_date": null,
+    "priority": "Medium",
+    "completed": false,
+    "is_markdown": true,
+    "attachments": [],
+    "subtasks": [
+      {
+        "title": "Review preview pane",
+        "description": "Verify the preview shows _italic_ text.",
+        "completed": false,
+        "due_date": null,
+        "priority": "Medium",
+        "attachments": [],
+        "is_markdown": true
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000002",
+    "title": "Plain text task",
+    "description": "This task uses plain text only.",
+    "due_date": null,
+    "priority": "Low",
+    "completed": false,
+    "is_markdown": false,
+    "attachments": [],
+    "subtasks": []
+  }
+]

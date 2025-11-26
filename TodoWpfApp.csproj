@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <!-- System.Text.Json is part of .NET 6 so no explicit reference is required -->
+    <PackageReference Include="Markdown.Xaml" Version="2.0.0" />
   </ItemGroup>
 
 </Project>
