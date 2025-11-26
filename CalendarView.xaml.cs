@@ -106,7 +106,7 @@ namespace TodoWpfApp
             }
         }
 
-        private void TaskCalendar_SelectedDateChanged(object? sender, SelectionChangedEventArgs e)
+        private void TaskCalendar_SelectedDatesChanged(object? sender, SelectionChangedEventArgs e)
         {
             if (TaskCalendar.SelectedDate.HasValue)
             {

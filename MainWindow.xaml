@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:TodoWpfApp"
         xmlns:models="clr-namespace:TodoWpfApp.Models"
-        xmlns:md="http://markdown.Xaml"
+        xmlns:md="clr-namespace:Markdown.Xaml;assembly=Markdown.Xaml"
         Title="Enhanced To-Do List" Height="500" Width="850">
     <Grid>
         <!-- Define rows: control bar, grid, details -->

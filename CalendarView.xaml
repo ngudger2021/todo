@@ -15,7 +15,7 @@
         <Calendar x:Name="TaskCalendar"
                   Margin="10"
                   SelectionMode="SingleDate"
-                  SelectedDateChanged="TaskCalendar_SelectedDateChanged">
+                  SelectedDatesChanged="TaskCalendar_SelectedDatesChanged">
             <Calendar.Resources>
                 <Style TargetType="CalendarDayButton">
                     <Setter Property="AllowDrop" Value="True" />
