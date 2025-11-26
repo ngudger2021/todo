@@ -17,7 +17,6 @@ namespace TodoWpfApp.Models
         private string _description = string.Empty;
         private DateTime? _dueDate;
         private string _priority = "Medium";
-        private bool _isMarkdown;
         private List<string> _tags = new();
 
         /// <summary>
@@ -57,9 +56,8 @@ namespace TodoWpfApp.Models
         }
 
         /// <summary>
-        /// Detailed description of the subtask.  This field can contain arbitrary text or
-        /// markdown depending on the value of <see cref="IsMarkdown"/>.  The editing
-        /// interface provides a resizable text box for entering long descriptions.
+        /// Detailed description of the subtask.  This field contains plain text entered
+        /// via a resizable text box.
         /// </summary>
         [JsonPropertyName("description")]
         public string Description
@@ -116,25 +114,6 @@ namespace TodoWpfApp.Models
         /// </summary>
         [JsonPropertyName("attachments")]
         public List<string> Attachments { get; set; } = new List<string>();
-
-        /// <summary>
-        /// When true, the Description is treated as markdown text rather than plain
-        /// formatting.  Markdown descriptions are currently stored as plain text but can
-        /// be rendered differently in the future.
-        /// </summary>
-        [JsonPropertyName("is_markdown")]
-        public bool IsMarkdown
-        {
-            get => _isMarkdown;
-            set
-            {
-                if (_isMarkdown != value)
-                {
-                    _isMarkdown = value;
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsMarkdown)));
-                }
-            }
-        }
 
         /// <summary>
         /// Tags that categorise the subtask.  Optional but always initialised to an empty list

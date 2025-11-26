@@ -7,15 +7,13 @@ using System.Windows;
 using Microsoft.Win32;
 using TodoWpfApp.Models;
 using System.Windows.Controls;
-using System.Windows.Data;
 
 namespace TodoWpfApp
 {
     /// <summary>
     /// Interaction logic for AddEditSubtaskWindow.xaml
     /// Provides a UI to create or edit a subtask.  Subtasks support a rich set of
-    /// metadata including description, due date, priority, attachments and a flag to
-    /// indicate whether the description should be interpreted as Markdown.  The
+    /// metadata including description, due date, priority and attachments.  The
     /// window copies new attachment files into the application's attachments
     /// directory and removes attachments no longer referenced by any other task or
     /// subtask.
@@ -28,7 +26,6 @@ namespace TodoWpfApp
         private readonly List<(bool IsNew, string Path)> _attachments = new();
         private readonly ObservableCollection<string> _attachmentDisplay = new();
         private const string AttachmentsDir = "attachments";
-        private readonly SubTask _markdownBinding = new();
 
         /// <summary>
         /// When creating a new subtask, this property will contain the newly
@@ -43,13 +40,6 @@ namespace TodoWpfApp
             InitializeComponent();
             _existingSubtask = subtask;
             _allTasks = allTasks;
-            _markdownBinding.IsMarkdown = subtask?.IsMarkdown ?? false;
-            MarkdownCheckBox.DataContext = _markdownBinding;
-            MarkdownCheckBox.SetBinding(CheckBox.IsCheckedProperty, new Binding(nameof(SubTask.IsMarkdown))
-            {
-                Source = _markdownBinding,
-                Mode = BindingMode.TwoWay
-            });
             // populate priority combo default index
             PriorityComboBox.SelectedIndex = 1;
             if (subtask != null)
@@ -117,7 +107,6 @@ namespace TodoWpfApp
                 return;
             }
             string description = DescriptionTextBox.Text.Trim();
-            bool isMarkdown = _markdownBinding.IsMarkdown;
             DateTime? dueDate = DueDatePicker.SelectedDate;
             string priority = (PriorityComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Medium";
             List<string> attachmentsDest = new();
@@ -187,7 +176,6 @@ namespace TodoWpfApp
                 // Update the existing subtask in place
                 _existingSubtask.Title = title;
                 _existingSubtask.Description = description;
-                _existingSubtask.IsMarkdown = isMarkdown;
                 _existingSubtask.DueDate = dueDate;
                 _existingSubtask.Priority = priority;
                 _existingSubtask.Attachments = attachmentsDest;
@@ -201,7 +189,6 @@ namespace TodoWpfApp
                     Title = title,
                     Completed = false,
                     Description = description,
-                    IsMarkdown = isMarkdown,
                     DueDate = dueDate,
                     Priority = priority,
                     Attachments = attachmentsDest

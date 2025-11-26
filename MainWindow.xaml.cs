@@ -296,29 +296,14 @@ namespace TodoWpfApp
             if (TasksGrid.SelectedItem is not TaskItem task)
             {
                 DescriptionText.Text = string.Empty;
-                DescriptionMarkdown.Markdown = string.Empty;
-                DescriptionText.Visibility = Visibility.Visible;
-                DescriptionMarkdown.Visibility = Visibility.Collapsed;
                 AttachmentsPanel.Children.Clear();
                 TagsPanel.Children.Clear();
                 SubtasksDetailsPanel.ItemsSource = null;
                 return;
             }
             // Description
-            bool isMarkdown = task.IsMarkdown;
             string description = string.IsNullOrWhiteSpace(task.Description) ? "No description" : task.Description;
-            if (isMarkdown)
-            {
-                DescriptionMarkdown.Markdown = description;
-                DescriptionMarkdown.Visibility = Visibility.Visible;
-                DescriptionText.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                DescriptionText.Text = description;
-                DescriptionText.Visibility = Visibility.Visible;
-                DescriptionMarkdown.Visibility = Visibility.Collapsed;
-            }
+            DescriptionText.Text = description;
             // Attachments
             AttachmentsPanel.Children.Clear();
             if (task.Attachments.Count > 0)
@@ -742,7 +727,6 @@ namespace TodoWpfApp
                 DueDate = nextDue,
                 Priority = task.Priority,
                 Completed = false,
-                IsMarkdown = task.IsMarkdown,
                 Attachments = new List<string>(task.Attachments ?? new List<string>()),
                 SubTasks = task.SubTasks.Select(st => new SubTask
                 {
@@ -752,7 +736,6 @@ namespace TodoWpfApp
                     DueDate = st.DueDate,
                     Priority = st.Priority,
                     Attachments = new List<string>(st.Attachments ?? new List<string>()),
-                    IsMarkdown = st.IsMarkdown,
                     Tags = new List<string>(st.Tags ?? new List<string>())
                 }).ToList(),
                 Tags = new List<string>(task.Tags ?? new List<string>()),

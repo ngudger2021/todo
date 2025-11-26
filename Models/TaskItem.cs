@@ -28,7 +28,6 @@ namespace TodoWpfApp.Models
         private bool _completed;
         private DateTime _createdAt = DateTime.Now;
         private DateTime? _completedAt;
-        private bool _isMarkdown;
         private List<string> _tags = new();
         private RecurrenceType _recurrenceType = RecurrenceType.None;
         private int _recurrenceInterval = 1;
@@ -133,26 +132,6 @@ namespace TodoWpfApp.Models
                 {
                     _completedAt = value;
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CompletedAt)));
-                }
-            }
-        }
-
-        /// <summary>
-        /// Indicates whether the description should be interpreted as Markdown.  If set
-        /// to true, the description text can contain markdown formatting.  The current
-        /// application does not perform markdown rendering but stores this flag for
-        /// future enhancements.
-        /// </summary>
-        [JsonPropertyName("is_markdown")]
-        public bool IsMarkdown
-        {
-            get => _isMarkdown;
-            set
-            {
-                if (_isMarkdown != value)
-                {
-                    _isMarkdown = value;
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsMarkdown)));
                 }
             }
         }

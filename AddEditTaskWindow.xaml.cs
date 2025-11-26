@@ -7,7 +7,6 @@ using System.Windows;
 using Microsoft.Win32;
 using TodoWpfApp.Models;
 using System.Windows.Controls;
-using System.Windows.Data;
 
 namespace TodoWpfApp
 {
@@ -23,20 +22,12 @@ namespace TodoWpfApp
         private readonly ObservableCollection<string> _attachmentDisplay = new();
         private readonly ObservableCollection<SubTask> _subTasks = new();
         private const string AttachmentsDir = "attachments";
-        private readonly TaskItem _markdownBinding = new();
 
         public AddEditTaskWindow(TaskItem? task, ObservableCollection<TaskItem> allTasks)
         {
             InitializeComponent();
             _existingTask = task;
             _allTasks = allTasks;
-            _markdownBinding.IsMarkdown = task?.IsMarkdown ?? false;
-            MarkdownCheckBox.DataContext = _markdownBinding;
-            MarkdownCheckBox.SetBinding(CheckBox.IsCheckedProperty, new Binding(nameof(TaskItem.IsMarkdown))
-            {
-                Source = _markdownBinding,
-                Mode = BindingMode.TwoWay
-            });
             if (task != null)
             {
                 Title = "Edit Task";
@@ -68,7 +59,6 @@ namespace TodoWpfApp
                         Description = st.Description,
                         DueDate = st.DueDate,
                         Priority = st.Priority,
-                        IsMarkdown = st.IsMarkdown,
                         Attachments = new List<string>(st.Attachments ?? new List<string>()),
                         Tags = new List<string>(st.Tags ?? new List<string>())
                     });
@@ -81,7 +71,6 @@ namespace TodoWpfApp
             {
                 Title = "Add Task";
                 PriorityComboBox.SelectedIndex = 1;
-                _markdownBinding.IsMarkdown = false;
                 TagsTextBox.Text = string.Empty;
                 SetRecurrenceTypeSelection(RecurrenceType.None);
                 RecurrenceIntervalTextBox.Text = "1";
@@ -121,7 +110,7 @@ namespace TodoWpfApp
         private void AddSubtask_Click(object sender, RoutedEventArgs e)
         {
             // Create a new subtask with default values; initially no details
-            _subTasks.Add(new SubTask { Title = string.Empty, Completed = false, Description = string.Empty, IsMarkdown = false, DueDate = null, Priority = "Medium", Attachments = new List<string>(), Tags = new List<string>() });
+            _subTasks.Add(new SubTask { Title = string.Empty, Completed = false, Description = string.Empty, DueDate = null, Priority = "Medium", Attachments = new List<string>(), Tags = new List<string>() });
         }
 
         private void RemoveSubtask_Click(object sender, RoutedEventArgs e)
@@ -173,7 +162,6 @@ namespace TodoWpfApp
                 return;
             }
             string description = DescriptionTextBox.Text.Trim();
-            bool isMarkdown = _markdownBinding.IsMarkdown;
             DateTime? dueDate = DueDatePicker.SelectedDate;
             string priority = (PriorityComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Medium";
             List<string> tags = ParseTags(TagsTextBox.Text);
@@ -240,7 +228,6 @@ namespace TodoWpfApp
                 Description = st.Description,
                 DueDate = st.DueDate,
                 Priority = st.Priority,
-                IsMarkdown = st.IsMarkdown,
                 Attachments = new List<string>(st.Attachments ?? new List<string>()),
                 Tags = new List<string>(st.Tags ?? new List<string>())
             }).ToList();
@@ -273,7 +260,6 @@ namespace TodoWpfApp
                 }
                 _existingTask.Title = title;
                 _existingTask.Description = description;
-                _existingTask.IsMarkdown = isMarkdown;
                 _existingTask.DueDate = dueDate;
                 _existingTask.Priority = priority;
                 _existingTask.Attachments = attachmentsDest;
@@ -290,7 +276,6 @@ namespace TodoWpfApp
                     Id = Guid.NewGuid(),
                     Title = title,
                     Description = description,
-                    IsMarkdown = isMarkdown,
                     CreatedAt = DateTime.Now,
                     DueDate = dueDate,
                     Priority = priority,
