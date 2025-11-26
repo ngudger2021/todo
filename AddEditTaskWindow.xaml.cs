@@ -205,7 +205,15 @@ namespace TodoWpfApp
                 {
                     if (!attachmentsDest.Contains(oldRel))
                     {
-                        bool stillUsed = _allTasks.Any(t => t != _existingTask && t.Attachments.Contains(oldRel));
+                        bool stillUsed = _allTasks.Any(t =>
+                            t != _existingTask &&
+                            (t.Attachments.Contains(oldRel) || t.SubTasks.Any(st => st.Attachments.Contains(oldRel))));
+
+                        // Preserve if any of the updated subtasks still reference the attachment
+                        if (!stillUsed)
+                        {
+                            stillUsed = newSubTasks.Any(st => st.Attachments.Contains(oldRel));
+                        }
                         if (!stillUsed && !Path.IsPathRooted(oldRel))
                         {
                             string oldPath = Path.Combine(attachmentsDirFull, oldRel);
