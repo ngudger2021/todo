@@ -21,13 +21,16 @@ namespace TodoWpfApp
     public partial class MainWindow : Window
     {
         private readonly ObservableCollection<TaskItem> _tasks = new();
+        private readonly ObservableCollection<TaskHistoryEntry> _taskHistory = new();
         private ICollectionView? _tasksView;
         private const string DataFile = "todo_data.json";
         private const string AttachmentsDir = "attachments";
         private const string SettingsFile = "user_settings.json";
         private ReminderSettings _reminderSettings = ReminderSettings.CreateDefault();
+        private bool _initializingTheme;
 
         public ObservableCollection<TaskItem> Tasks => _tasks;
+        public ObservableCollection<TaskHistoryEntry> TaskHistory => _taskHistory;
 
         public MainWindow()
         {
@@ -51,12 +54,14 @@ namespace TodoWpfApp
             RefreshTagFilterOptions();
             LoadReminderSettings();
             ApplyReminderSettingsToUi();
+            ApplyTheme(_reminderSettings.Theme, false);
         }
 
         public ReminderSettings GetReminderSettings() => _reminderSettings;
 
         internal void SaveTasksAndRefresh()
         {
+            SyncHistoryMetadata();
             SaveTasks();
             _tasksView?.Refresh();
             UpdateDetails();
@@ -98,43 +103,56 @@ namespace TodoWpfApp
         }
 
         /// <summary>
-        /// Load tasks from the JSON data file.  If the file does not exist or
+        /// Load tasks and history from the JSON data file.  If the file does not exist or
         /// cannot be parsed, start with an empty collection.
         /// </summary>
         private void LoadTasks()
         {
             _tasks.Clear();
+            _taskHistory.Clear();
             var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DataFile);
             try
             {
-                if (File.Exists(filePath))
+                if (!File.Exists(filePath))
                 {
-                    string json = File.ReadAllText(filePath);
-                    var options = new JsonSerializerOptions
+                    return;
+                }
+
+                string json = File.ReadAllText(filePath);
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                };
+                options.Converters.Add(new JsonStringEnumConverter());
+
+                TaskDataContainer? container = null;
+                try
+                {
+                    container = JsonSerializer.Deserialize<TaskDataContainer>(json, options);
+                }
+                catch
+                {
+                    // fallback to old format below
+                }
+
+                if (container?.Tasks != null && container.Tasks.Count > 0)
+                {
+                    LoadTasksIntoCollection(container.Tasks);
+                    if (container.History != null)
                     {
-                        PropertyNameCaseInsensitive = true,
-                    };
-                    options.Converters.Add(new JsonStringEnumConverter());
+                        foreach (var entry in container.History)
+                        {
+                            _taskHistory.Add(entry);
+                        }
+                    }
+                }
+                else
+                {
+                    // Attempt legacy format: a flat list of tasks
                     var loaded = JsonSerializer.Deserialize<List<TaskItem>>(json, options);
                     if (loaded != null)
                     {
-                        foreach (var t in loaded)
-                        {
-                            t.Attachments ??= new List<string>();
-                            t.SubTasks ??= new List<SubTask>();
-                            // Ensure subtasks have non-null attachments lists
-                            foreach (var st in t.SubTasks)
-                            {
-                                st.Attachments ??= new List<string>();
-                                st.Tags ??= new List<string>();
-                            }
-                            t.Tags ??= new List<string>();
-                            if (t.RecurrenceInterval <= 0)
-                            {
-                                t.RecurrenceInterval = 1;
-                            }
-                            _tasks.Add(t);
-                        }
+                        LoadTasksIntoCollection(loaded);
                     }
                 }
             }
@@ -142,19 +160,58 @@ namespace TodoWpfApp
             {
                 // ignore errors and start with empty list
             }
+
+            foreach (var task in _tasks)
+            {
+                EnsureHistoryEntry(task);
+            }
+        }
+
+        private void LoadTasksIntoCollection(IEnumerable<TaskItem> tasks)
+        {
+            foreach (var t in tasks)
+            {
+                t.Attachments ??= new List<string>();
+                t.SubTasks ??= new List<SubTask>();
+                foreach (var st in t.SubTasks)
+                {
+                    st.Attachments ??= new List<string>();
+                    st.Tags ??= new List<string>();
+                }
+                t.Tags ??= new List<string>();
+                if (t.RecurrenceInterval <= 0)
+                {
+                    t.RecurrenceInterval = 1;
+                }
+                if (t.CreatedAt == default)
+                {
+                    t.CreatedAt = DateTime.Now;
+                }
+                if (t.Completed && !t.CompletedAt.HasValue)
+                {
+                    t.CompletedAt = t.CreatedAt;
+                }
+                _tasks.Add(t);
+            }
         }
 
         /// <summary>
-        /// Save the current tasks collection to disk as JSON.
+        /// Save the current tasks and history collection to disk as JSON.
         /// </summary>
         private void SaveTasks()
         {
             try
             {
+                SyncHistoryMetadata();
                 var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DataFile);
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 options.Converters.Add(new JsonStringEnumConverter());
-                string json = JsonSerializer.Serialize(_tasks, options);
+                var container = new TaskDataContainer
+                {
+                    Tasks = _tasks.ToList(),
+                    History = _taskHistory.ToList()
+                };
+                string json = JsonSerializer.Serialize(container, options);
                 File.WriteAllText(filePath, json);
             }
             catch
@@ -209,6 +266,7 @@ namespace TodoWpfApp
         {
             ReminderToggle.IsChecked = _reminderSettings.RemindersEnabled;
             ReminderLeadTimeTextBox.Text = _reminderSettings.LeadTimeHours.ToString();
+            SetThemeSelection(_reminderSettings.Theme);
         }
 
         private void UpdateReminderSettingsFromUi()
@@ -383,14 +441,19 @@ namespace TodoWpfApp
             if (!task.Completed)
             {
                 task.Completed = true;
+                if (!task.CompletedAt.HasValue)
+                {
+                    task.CompletedAt = DateTime.Now;
+                }
+                var entry = EnsureHistoryEntry(task);
+                entry.CompletedAt ??= task.CompletedAt;
                 var nextTask = CreateNextRecurringInstance(task);
                 if (nextTask != null)
                 {
                     _tasks.Add(nextTask);
+                    EnsureHistoryEntry(nextTask);
                 }
-                SaveTasks();
-                _tasksView?.Refresh();
-                UpdateDetails();
+                SaveTasksAndRefresh();
             }
             else
             {
@@ -459,16 +522,26 @@ namespace TodoWpfApp
                     }
                 }
             }
+            var historyEntry = EnsureHistoryEntry(task);
+            historyEntry.CompletedAt ??= task.CompletedAt;
+            historyEntry.DeletedAt = DateTime.Now;
             _tasks.Remove(task);
-            SaveTasks();
-            _tasksView?.Refresh();
+            SaveTasksAndRefresh();
             RefreshTagFilterOptions();
-            UpdateDetails();
         }
 
         private void CalendarButton_Click(object sender, RoutedEventArgs e)
         {
             var window = new CalendarView(_tasks, SaveTasksAndRefresh)
+            {
+                Owner = this
+            };
+            window.Show();
+        }
+
+        private void HistoryButton_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new TaskHistoryWindow(_taskHistory)
             {
                 Owner = this
             };
@@ -497,6 +570,20 @@ namespace TodoWpfApp
             {
                 UpdateReminderSettingsFromUi();
                 e.Handled = true;
+            }
+        }
+
+        private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_initializingTheme)
+            {
+                return;
+            }
+
+            if (ThemeComboBox?.SelectedItem is ComboBoxItem item)
+            {
+                var theme = item.Content?.ToString() ?? "Light";
+                ApplyTheme(theme);
             }
         }
 
@@ -556,6 +643,66 @@ namespace TodoWpfApp
             }
 
             _tasksView.Refresh();
+        }
+
+        private void SetThemeSelection(string themeName)
+        {
+            if (ThemeComboBox == null)
+            {
+                return;
+            }
+
+            _initializingTheme = true;
+            try
+            {
+                foreach (ComboBoxItem item in ThemeComboBox.Items)
+                {
+                    if (string.Equals(item.Content?.ToString(), themeName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        ThemeComboBox.SelectedItem = item;
+                        return;
+                    }
+                }
+
+                ThemeComboBox.SelectedIndex = 0;
+            }
+            finally
+            {
+                _initializingTheme = false;
+            }
+        }
+
+        private void ApplyTheme(string themeName, bool persist = true)
+        {
+            string source = themeName switch
+            {
+                "Dark" => "Themes/DarkTheme.xaml",
+                "Forest" => "Themes/ForestTheme.xaml",
+                _ => "Themes/LightTheme.xaml"
+            };
+
+            try
+            {
+                var dictionary = new ResourceDictionary { Source = new Uri(source, UriKind.Relative) };
+                var merged = Application.Current.Resources.MergedDictionaries;
+                if (merged.Count > 0)
+                {
+                    merged[0] = dictionary;
+                }
+                else
+                {
+                    merged.Add(dictionary);
+                }
+                _reminderSettings.Theme = themeName;
+                if (persist)
+                {
+                    SaveReminderSettings();
+                }
+            }
+            catch
+            {
+                // Ignore theme load errors and keep existing theme.
+            }
         }
 
         private TaskItem? CreateNextRecurringInstance(TaskItem task)
@@ -641,6 +788,35 @@ namespace TodoWpfApp
             }
 
             public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+        }
+
+        private TaskHistoryEntry EnsureHistoryEntry(TaskItem task)
+        {
+            var existing = _taskHistory.FirstOrDefault(h => h.TaskId == task.Id);
+            if (existing == null)
+            {
+                existing = TaskHistoryEntry.FromTask(task);
+                _taskHistory.Add(existing);
+            }
+            else
+            {
+                existing.Title = task.Title;
+                existing.Description = task.Description;
+                if (task.CompletedAt.HasValue && !existing.CompletedAt.HasValue)
+                {
+                    existing.CompletedAt = task.CompletedAt;
+                }
+            }
+
+            return existing;
+        }
+
+        private void SyncHistoryMetadata()
+        {
+            foreach (var task in _tasks)
+            {
+                EnsureHistoryEntry(task);
+            }
         }
     }
 }

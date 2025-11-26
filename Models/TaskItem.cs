@@ -26,6 +26,8 @@ namespace TodoWpfApp.Models
         private DateTime? _dueDate;
         private string _priority = "Medium";
         private bool _completed;
+        private DateTime _createdAt = DateTime.Now;
+        private DateTime? _completedAt;
         private bool _isMarkdown;
         private List<string> _tags = new();
         private RecurrenceType _recurrenceType = RecurrenceType.None;
@@ -101,7 +103,36 @@ namespace TodoWpfApp.Models
                 {
                     _completed = value;
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Completed)));
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CompletedAt)));
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Status)));
+                }
+            }
+        }
+
+        [JsonPropertyName("created_at")]
+        public DateTime CreatedAt
+        {
+            get => _createdAt;
+            set
+            {
+                if (_createdAt != value)
+                {
+                    _createdAt = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CreatedAt)));
+                }
+            }
+        }
+
+        [JsonPropertyName("completed_at")]
+        public DateTime? CompletedAt
+        {
+            get => _completedAt;
+            set
+            {
+                if (_completedAt != value)
+                {
+                    _completedAt = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CompletedAt)));
                 }
             }
         }
