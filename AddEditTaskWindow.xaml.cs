@@ -42,6 +42,7 @@ namespace TodoWpfApp
                 Title = "Edit Task";
                 TitleTextBox.Text = task.Title;
                 DescriptionTextBox.Text = task.Description;
+                TagsTextBox.Text = task.Tags.Count == 0 ? string.Empty : string.Join(", ", task.Tags);
                 if (task.DueDate.HasValue)
                     DueDatePicker.SelectedDate = task.DueDate.Value;
                 foreach (ComboBoxItem item in PriorityComboBox.Items)
@@ -77,6 +78,7 @@ namespace TodoWpfApp
                 Title = "Add Task";
                 PriorityComboBox.SelectedIndex = 1;
                 _markdownBinding.IsMarkdown = false;
+                TagsTextBox.Text = string.Empty;
             }
             AttachmentsListBox.ItemsSource = _attachmentDisplay;
             SubtasksListBox.ItemsSource = _subTasks;
@@ -112,7 +114,7 @@ namespace TodoWpfApp
         private void AddSubtask_Click(object sender, RoutedEventArgs e)
         {
             // Create a new subtask with default values; initially no details
-            _subTasks.Add(new SubTask { Title = string.Empty, Completed = false, Description = string.Empty, IsMarkdown = false, DueDate = null, Priority = "Medium", Attachments = new List<string>() });
+            _subTasks.Add(new SubTask { Title = string.Empty, Completed = false, Description = string.Empty, IsMarkdown = false, DueDate = null, Priority = "Medium", Attachments = new List<string>(), Tags = new List<string>() });
         }
 
         private void RemoveSubtask_Click(object sender, RoutedEventArgs e)
@@ -167,6 +169,7 @@ namespace TodoWpfApp
             bool isMarkdown = _markdownBinding.IsMarkdown;
             DateTime? dueDate = DueDatePicker.SelectedDate;
             string priority = (PriorityComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Medium";
+            List<string> tags = ParseTags(TagsTextBox.Text);
             List<string> attachmentsDest = new();
             string attachmentsBaseDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AttachmentsDir);
             foreach (var entry in _attachments)
@@ -202,7 +205,8 @@ namespace TodoWpfApp
                 DueDate = st.DueDate,
                 Priority = st.Priority,
                 IsMarkdown = st.IsMarkdown,
-                Attachments = new List<string>(st.Attachments)
+                Attachments = new List<string>(st.Attachments),
+                Tags = new List<string>(st.Tags)
             }).ToList();
             string attachmentsDirFull = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AttachmentsDir);
             if (_existingTask != null)
@@ -238,6 +242,7 @@ namespace TodoWpfApp
                 _existingTask.Priority = priority;
                 _existingTask.Attachments = attachmentsDest;
                 _existingTask.SubTasks = newSubTasks;
+                _existingTask.Tags = tags;
             }
             else
             {
@@ -251,12 +256,23 @@ namespace TodoWpfApp
                     Priority = priority,
                     Completed = false,
                     Attachments = attachmentsDest,
-                    SubTasks = newSubTasks
+                    SubTasks = newSubTasks,
+                    Tags = tags
                 };
                 _allTasks.Add(newTask);
             }
             DialogResult = true;
             Close();
+        }
+
+        private static List<string> ParseTags(string input)
+        {
+            return input
+                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => t.Trim())
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)

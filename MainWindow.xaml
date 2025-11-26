@@ -14,17 +14,35 @@
         </Grid.RowDefinitions>
 
         <!-- Control bar -->
-        <StackPanel Orientation="Horizontal" Margin="5" Grid.Row="0">
+        <StackPanel Orientation="Horizontal" Margin="5" Grid.Row="0" VerticalAlignment="Center">
             <Button x:Name="AddButton" Content="Add Task" Margin="2" Click="AddButton_Click"/>
             <Button x:Name="EditButton" Content="Edit Task" Margin="2" Click="EditButton_Click"/>
             <Button x:Name="CompleteButton" Content="Mark Complete" Margin="2" Click="CompleteButton_Click"/>
             <Button x:Name="DeleteButton" Content="Delete Task" Margin="2" Click="DeleteButton_Click"/>
-            <TextBlock Text="Filter:" VerticalAlignment="Center" Margin="10,0,0,0"/>
-            <ComboBox x:Name="FilterComboBox" Width="120" SelectionChanged="FilterComboBox_SelectionChanged" SelectedIndex="1">
-                <ComboBoxItem Content="All"/>
-                <ComboBoxItem Content="Pending"/>
-                <ComboBoxItem Content="Completed"/>
-            </ComboBox>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                <TextBlock Text="Status:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="StatusFilterComboBox" Width="120" Margin="5,0,0,0" SelectionChanged="FilterBar_Changed" SelectedIndex="1">
+                    <ComboBoxItem Content="All"/>
+                    <ComboBoxItem Content="Pending"/>
+                    <ComboBoxItem Content="Completed"/>
+                </ComboBox>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                <TextBlock Text="Tag:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="TagFilterComboBox" Width="140" Margin="5,0,0,0" SelectionChanged="FilterBar_Changed"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                <TextBlock Text="Search:" VerticalAlignment="Center"/>
+                <TextBox x:Name="SearchTextBox" Width="160" Margin="5,0,0,0" TextChanged="SearchTextBox_TextChanged"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                <TextBlock Text="Group by:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="GroupByComboBox" Width="140" Margin="5,0,0,0" SelectionChanged="GroupByComboBox_SelectionChanged" SelectedIndex="0">
+                    <ComboBoxItem Content="None"/>
+                    <ComboBoxItem Content="Due Date"/>
+                    <ComboBoxItem Content="Tag"/>
+                </ComboBox>
+            </StackPanel>
             <CheckBox x:Name="ReminderToggle" Content="Enable Reminders" Margin="10,0,0,0" Checked="ReminderToggle_Changed" Unchecked="ReminderToggle_Changed" VerticalAlignment="Center"/>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
                 <TextBlock Text="Lead time (hours):" VerticalAlignment="Center"/>
@@ -38,6 +56,26 @@
                 <DataGridTextColumn Header="Title" Binding="{Binding Title}" SortMemberPath="Title" Width="2*"/>
                 <DataGridTextColumn Header="Due Date" Binding="{Binding DueDate, StringFormat=d}" SortMemberPath="DueDate" Width="*"/>
                 <DataGridTextColumn Header="Priority" Binding="{Binding Priority}" SortMemberPath="Priority" Width="*"/>
+                <DataGridTemplateColumn Header="Tags" Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ItemsControl ItemsSource="{Binding Tags}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#FFE0E0E0" CornerRadius="3" Padding="4" Margin="2,1">
+                                            <TextBlock Text="{Binding}" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
                 <DataGridTextColumn Header="Status" Binding="{Binding Status}" SortMemberPath="Completed" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
@@ -56,6 +94,8 @@
                 </Grid>
                 <TextBlock Text="Attachments:" FontWeight="Bold"/>
                 <StackPanel x:Name="AttachmentsPanel" Margin="0,0,0,5"/>
+                <TextBlock Text="Tags:" FontWeight="Bold"/>
+                <WrapPanel x:Name="TagsPanel" Margin="0,0,0,5" />
                 <TextBlock Text="Subtasks:" FontWeight="Bold"/>
                 <ItemsControl x:Name="SubtasksDetailsPanel">
                     <ItemsControl.ItemTemplate>

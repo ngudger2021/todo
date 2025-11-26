@@ -18,7 +18,8 @@ namespace TodoWpfApp.Models
         private DateTime? _dueDate;
         private string _priority = "Medium";
         private bool _completed;
-    private bool _isMarkdown;
+        private bool _isMarkdown;
+        private List<string> _tags = new();
 
         [JsonPropertyName("id")]
         public Guid Id { get; set; } = Guid.NewGuid();
@@ -130,10 +131,33 @@ namespace TodoWpfApp.Models
         public List<SubTask> SubTasks { get; set; } = new List<SubTask>();
 
         /// <summary>
+        /// Tags that categorise the task.  Stored as simple strings and persisted in the
+        /// JSON representation.  Defaults to an empty list so callers can freely add tags
+        /// without null checks.
+        /// </summary>
+        [JsonPropertyName("tags")]
+        public List<string> Tags
+        {
+            get => _tags;
+            set
+            {
+                _tags = value ?? new List<string>();
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Tags)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TagsDisplay)));
+            }
+        }
+
+        /// <summary>
         /// Computed property for displaying status text.
         /// </summary>
         [JsonIgnore]
         public string Status => Completed ? "Completed" : "Pending";
+
+        /// <summary>
+        /// Convenience string for displaying tags as a comma-separated list.
+        /// </summary>
+        [JsonIgnore]
+        public string TagsDisplay => Tags.Count == 0 ? string.Empty : string.Join(", ", Tags);
 
         public event PropertyChangedEventHandler? PropertyChanged;
     }
