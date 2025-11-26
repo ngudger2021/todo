@@ -1,0 +1,140 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Text.Json.Serialization;
+
+namespace TodoWpfApp.Models
+{
+    /// <summary>
+    /// Represents a single task in the to‑do list.  Tasks hold metadata
+    /// including title, description, due date, priority, completion state,
+    /// attachments and a collection of subtasks.  Attachment names are stored
+    /// as relative filenames inside the application’s attachments folder.
+    /// </summary>
+    public class TaskItem : INotifyPropertyChanged
+    {
+        private string _title = string.Empty;
+        private string _description = string.Empty;
+        private DateTime? _dueDate;
+        private string _priority = "Medium";
+        private bool _completed;
+    private bool _isMarkdown;
+
+        [JsonPropertyName("id")]
+        public Guid Id { get; set; } = Guid.NewGuid();
+
+        [JsonPropertyName("title")]
+        public string Title
+        {
+            get => _title;
+            set
+            {
+                if (_title != value)
+                {
+                    _title = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Title)));
+                }
+            }
+        }
+
+        [JsonPropertyName("description")]
+        public string Description
+        {
+            get => _description;
+            set
+            {
+                if (_description != value)
+                {
+                    _description = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Description)));
+                }
+            }
+        }
+
+        [JsonPropertyName("due_date")]
+        public DateTime? DueDate
+        {
+            get => _dueDate;
+            set
+            {
+                if (_dueDate != value)
+                {
+                    _dueDate = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DueDate)));
+                }
+            }
+        }
+
+        [JsonPropertyName("priority")]
+        public string Priority
+        {
+            get => _priority;
+            set
+            {
+                if (_priority != value)
+                {
+                    _priority = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Priority)));
+                }
+            }
+        }
+
+        [JsonPropertyName("completed")]
+        public bool Completed
+        {
+            get => _completed;
+            set
+            {
+                if (_completed != value)
+                {
+                    _completed = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Completed)));
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Status)));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Indicates whether the description should be interpreted as Markdown.  If set
+        /// to true, the description text can contain markdown formatting.  The current
+        /// application does not perform markdown rendering but stores this flag for
+        /// future enhancements.
+        /// </summary>
+        [JsonPropertyName("is_markdown")]
+        public bool IsMarkdown
+        {
+            get => _isMarkdown;
+            set
+            {
+                if (_isMarkdown != value)
+                {
+                    _isMarkdown = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsMarkdown)));
+                }
+            }
+        }
+
+        /// <summary>
+        /// List of relative attachment file names stored under the attachments
+        /// directory.  Only the file name (not the full path) is stored so
+        /// that the application remains portable.
+        /// </summary>
+        [JsonPropertyName("attachments")]
+        public List<string> Attachments { get; set; } = new List<string>();
+
+        /// <summary>
+        /// List of subtasks associated with this task.  Each subtask can be
+        /// marked complete independently.
+        /// </summary>
+        [JsonPropertyName("subtasks")]
+        public List<SubTask> SubTasks { get; set; } = new List<SubTask>();
+
+        /// <summary>
+        /// Computed property for displaying status text.
+        /// </summary>
+        [JsonIgnore]
+        public string Status => Completed ? "Completed" : "Pending";
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+    }
+}
