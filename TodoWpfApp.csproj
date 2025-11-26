@@ -9,10 +9,4 @@
     <!-- Use implicit usings to reduce boilerplate -->
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-
-  <ItemGroup>
-    <!-- System.Text.Json is part of .NET 6 so no explicit reference is required -->
-    <PackageReference Include="Markdown.Xaml" Version="1.0.0" />
-  </ItemGroup>
-
 </Project>
