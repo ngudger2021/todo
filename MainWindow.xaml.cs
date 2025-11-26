@@ -54,6 +54,13 @@ namespace TodoWpfApp
 
         public ReminderSettings GetReminderSettings() => _reminderSettings;
 
+        internal void SaveTasksAndRefresh()
+        {
+            SaveTasks();
+            _tasksView?.Refresh();
+            UpdateDetails();
+        }
+
         /// <summary>
         /// Predicate for filtering tasks based on the selected filter option.
         /// </summary>
@@ -445,6 +452,15 @@ namespace TodoWpfApp
             _tasksView?.Refresh();
             RefreshTagFilterOptions();
             UpdateDetails();
+        }
+
+        private void CalendarButton_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new CalendarView(_tasks, SaveTasksAndRefresh)
+            {
+                Owner = this
+            };
+            window.Show();
         }
 
         private void Subtask_CheckChanged(object sender, RoutedEventArgs e)

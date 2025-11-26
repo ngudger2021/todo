@@ -19,6 +19,7 @@
             <Button x:Name="EditButton" Content="Edit Task" Margin="2" Click="EditButton_Click"/>
             <Button x:Name="CompleteButton" Content="Mark Complete" Margin="2" Click="CompleteButton_Click"/>
             <Button x:Name="DeleteButton" Content="Delete Task" Margin="2" Click="DeleteButton_Click"/>
+            <Button x:Name="CalendarButton" Content="Calendar View" Margin="2" Click="CalendarButton_Click"/>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
                 <TextBlock Text="Status:" VerticalAlignment="Center"/>
                 <ComboBox x:Name="StatusFilterComboBox" Width="120" Margin="5,0,0,0" SelectionChanged="FilterBar_Changed" SelectedIndex="1">
