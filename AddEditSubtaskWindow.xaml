@@ -1,0 +1,65 @@
+<Window x:Class="TodoWpfApp.AddEditSubtaskWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:TodoWpfApp"
+        Title="Subtask" Height="550" Width="500" ResizeMode="CanResizeWithGrip">
+    <!-- Use a ScrollViewer so the window can accommodate very long descriptions without
+         overflowing. -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/><!-- Title label -->
+                <RowDefinition Height="Auto"/><!-- Title textbox -->
+                <RowDefinition Height="Auto"/><!-- Description label -->
+                <RowDefinition Height="200"/><!-- Description text area (resizable) -->
+                <RowDefinition Height="Auto"/><!-- GridSplitter -->
+                <RowDefinition Height="Auto"/><!-- Markdown toggle -->
+                <RowDefinition Height="Auto"/><!-- Due date label -->
+                <RowDefinition Height="Auto"/><!-- DatePicker -->
+                <RowDefinition Height="Auto"/><!-- Priority label -->
+                <RowDefinition Height="Auto"/><!-- Priority combo -->
+                <RowDefinition Height="Auto"/><!-- Attachments group -->
+                <RowDefinition Height="Auto"/><!-- Buttons -->
+            </Grid.RowDefinitions>
+            <!-- Title -->
+            <TextBlock Text="Title:" Grid.Row="0"/>
+            <TextBox x:Name="TitleTextBox" Grid.Row="1" Margin="0,2,0,5"/>
+            <!-- Description -->
+            <TextBlock Text="Description:" Grid.Row="2" Margin="0,5,0,0"/>
+            <TextBox x:Name="DescriptionTextBox" Grid.Row="3" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" VerticalAlignment="Stretch"/>
+            <!-- GridSplitter to allow the user to resize the description area -->
+            <GridSplitter Grid.Row="4" HorizontalAlignment="Stretch" Height="5" Background="LightGray" VerticalAlignment="Center" ShowsPreview="True"/>
+            <!-- Markdown toggle -->
+            <CheckBox x:Name="MarkdownCheckBox" Grid.Row="5" Content="Use Markdown for description" Margin="0,5,0,0"/>
+            <!-- Due date -->
+            <TextBlock Text="Due Date:" Grid.Row="6" Margin="0,5,0,0"/>
+            <DatePicker x:Name="DueDatePicker" Grid.Row="7"/>
+            <!-- Priority -->
+            <TextBlock Text="Priority:" Grid.Row="8" Margin="0,5,0,0"/>
+            <ComboBox x:Name="PriorityComboBox" Grid.Row="9" SelectedIndex="1">
+                <ComboBoxItem Content="High"/>
+                <ComboBoxItem Content="Medium"/>
+                <ComboBoxItem Content="Low"/>
+            </ComboBox>
+            <!-- Attachments -->
+            <GroupBox Header="Attachments" Grid.Row="10" Margin="0,10,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <ListBox x:Name="AttachmentsListBox" Grid.Row="0"/>
+                    <StackPanel Orientation="Horizontal" Grid.Row="1" Margin="0,5,0,0">
+                        <Button Content="Add..." Width="80" Click="AddAttachment_Click"/>
+                        <Button Content="Remove" Width="80" Margin="5,0,0,0" Click="RemoveAttachment_Click"/>
+                    </StackPanel>
+                </Grid>
+            </GroupBox>
+            <!-- Buttons -->
+            <StackPanel Orientation="Horizontal" Grid.Row="11" HorizontalAlignment="Right" Margin="0,10,0,0">
+                <Button Content="Save" Width="90" Margin="0,0,5,0" Click="SaveButton_Click"/>
+                <Button Content="Cancel" Width="90" Click="CancelButton_Click"/>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Window>

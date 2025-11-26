@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Build a Windows WPF application -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <!-- Use implicit usings to reduce boilerplate -->
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- System.Text.Json is part of .NET 6 so no explicit reference is required -->
+  </ItemGroup>
+
+</Project>
