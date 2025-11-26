@@ -291,6 +291,7 @@ namespace TodoWpfApp
                     Title = title,
                     Description = description,
                     IsMarkdown = isMarkdown,
+                    CreatedAt = DateTime.Now,
                     DueDate = dueDate,
                     Priority = priority,
                     Completed = false,
