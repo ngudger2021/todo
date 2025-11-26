@@ -7,6 +7,7 @@ using System.Windows;
 using Microsoft.Win32;
 using TodoWpfApp.Models;
 using System.Windows.Controls;
+using System.Windows.Data;
 
 namespace TodoWpfApp
 {
@@ -22,12 +23,20 @@ namespace TodoWpfApp
         private readonly ObservableCollection<string> _attachmentDisplay = new();
         private readonly ObservableCollection<SubTask> _subTasks = new();
         private const string AttachmentsDir = "attachments";
+        private readonly TaskItem _markdownBinding = new();
 
         public AddEditTaskWindow(TaskItem? task, ObservableCollection<TaskItem> allTasks)
         {
             InitializeComponent();
             _existingTask = task;
             _allTasks = allTasks;
+            _markdownBinding.IsMarkdown = task?.IsMarkdown ?? false;
+            MarkdownCheckBox.DataContext = _markdownBinding;
+            MarkdownCheckBox.SetBinding(CheckBox.IsCheckedProperty, new Binding(nameof(TaskItem.IsMarkdown))
+            {
+                Source = _markdownBinding,
+                Mode = BindingMode.TwoWay
+            });
             if (task != null)
             {
                 Title = "Edit Task";
@@ -62,14 +71,12 @@ namespace TodoWpfApp
                         Attachments = new List<string>(st.Attachments)
                     });
                 }
-                // Set markdown flag for the main task
-                MarkdownCheckBox.IsChecked = task.IsMarkdown;
             }
             else
             {
                 Title = "Add Task";
                 PriorityComboBox.SelectedIndex = 1;
-                MarkdownCheckBox.IsChecked = false;
+                _markdownBinding.IsMarkdown = false;
             }
             AttachmentsListBox.ItemsSource = _attachmentDisplay;
             SubtasksListBox.ItemsSource = _subTasks;
@@ -157,7 +164,7 @@ namespace TodoWpfApp
                 return;
             }
             string description = DescriptionTextBox.Text.Trim();
-            bool isMarkdown = MarkdownCheckBox.IsChecked == true;
+            bool isMarkdown = _markdownBinding.IsMarkdown;
             DateTime? dueDate = DueDatePicker.SelectedDate;
             string priority = (PriorityComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Medium";
             List<string> attachmentsDest = new();

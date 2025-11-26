@@ -7,6 +7,7 @@ using System.Windows;
 using Microsoft.Win32;
 using TodoWpfApp.Models;
 using System.Windows.Controls;
+using System.Windows.Data;
 
 namespace TodoWpfApp
 {
@@ -27,6 +28,7 @@ namespace TodoWpfApp
         private readonly List<(bool IsNew, string Path)> _attachments = new();
         private readonly ObservableCollection<string> _attachmentDisplay = new();
         private const string AttachmentsDir = "attachments";
+        private readonly SubTask _markdownBinding = new();
 
         /// <summary>
         /// When creating a new subtask, this property will contain the newly
@@ -41,6 +43,13 @@ namespace TodoWpfApp
             InitializeComponent();
             _existingSubtask = subtask;
             _allTasks = allTasks;
+            _markdownBinding.IsMarkdown = subtask?.IsMarkdown ?? false;
+            MarkdownCheckBox.DataContext = _markdownBinding;
+            MarkdownCheckBox.SetBinding(CheckBox.IsCheckedProperty, new Binding(nameof(SubTask.IsMarkdown))
+            {
+                Source = _markdownBinding,
+                Mode = BindingMode.TwoWay
+            });
             // populate priority combo default index
             PriorityComboBox.SelectedIndex = 1;
             if (subtask != null)
@@ -48,7 +57,6 @@ namespace TodoWpfApp
                 Title = "Edit Subtask";
                 TitleTextBox.Text = subtask.Title;
                 DescriptionTextBox.Text = subtask.Description;
-                MarkdownCheckBox.IsChecked = subtask.IsMarkdown;
                 if (subtask.DueDate.HasValue)
                     DueDatePicker.SelectedDate = subtask.DueDate.Value;
                 // Select priority in combo
@@ -109,7 +117,7 @@ namespace TodoWpfApp
                 return;
             }
             string description = DescriptionTextBox.Text.Trim();
-            bool isMarkdown = MarkdownCheckBox.IsChecked == true;
+            bool isMarkdown = _markdownBinding.IsMarkdown;
             DateTime? dueDate = DueDatePicker.SelectedDate;
             string priority = (PriorityComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Medium";
             List<string> attachmentsDest = new();
