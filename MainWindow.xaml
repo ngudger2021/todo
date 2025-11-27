@@ -11,7 +11,7 @@
         </Grid.RowDefinitions>
 
         <!-- Control bar split across two rows so buttons and filters always fit without horizontal scrolling -->
-        <Border Grid.Row="0" Padding="10" Background="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}">
+        <Border Grid.Row="0" Padding="10" Background="{DynamicResource SecondaryBackgroundBrush}">
             <StackPanel>
                 <WrapPanel VerticalAlignment="Center" Margin="0,0,0,6" ItemWidth="120" ItemHeight="32">
                     <Button x:Name="AddButton" Content="Add Task" Margin="2" Click="AddButton_Click"/>
@@ -88,8 +88,8 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="#FFE0E0E0" CornerRadius="3" Padding="4" Margin="2,1">
-                                                <TextBlock Text="{Binding}" />
+                                            <Border Background="{DynamicResource AccentBrush}" CornerRadius="3" Padding="4" Margin="2,1">
+                                                <TextBlock Text="{Binding}" Foreground="{DynamicResource AccentForegroundBrush}" />
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -101,7 +101,7 @@
                 </DataGrid.Columns>
             </DataGrid>
 
-            <Border Grid.Column="1" Padding="10" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" CornerRadius="4">
+            <Border Grid.Column="1" Padding="10" Background="{DynamicResource SecondaryBackgroundBrush}" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="4">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <TextBlock Text="Description:" FontWeight="Bold"/>
