@@ -2,9 +2,9 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Color x:Key="PrimaryBackgroundColor">#FF0B3D2E</Color>
     <Color x:Key="SecondaryBackgroundColor">#FF14593F</Color>
-    <Color x:Key="PrimaryForegroundColor">#FFE6F4EA</Color>
+    <Color x:Key="PrimaryForegroundColor">#FFF3FFFA</Color>
     <Color x:Key="AccentColor">#FF2DD4BF</Color>
-    <Color x:Key="AccentForegroundColor">#FF083226</Color>
+    <Color x:Key="AccentForegroundColor">#FFFFFFFF</Color>
     <Color x:Key="ControlBorderColor">#FF1F6B4F</Color>
 
     <SolidColorBrush x:Key="PrimaryBackgroundBrush" Color="{StaticResource PrimaryBackgroundColor}"/>
