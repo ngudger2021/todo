@@ -65,21 +65,15 @@ namespace TodoWpfApp
                         Tags = new List<string>(st.Tags ?? new List<string>())
                     });
                 }
-                SetRecurrenceTypeSelection(task.RecurrenceType);
-                RecurrenceIntervalTextBox.Text = Math.Max(1, task.RecurrenceInterval).ToString();
-                RecursUntilDatePicker.SelectedDate = task.RecursUntil;
             }
             else
             {
                 Title = "Add Task";
                 PriorityComboBox.SelectedIndex = 1;
                 TagsTextBox.Text = string.Empty;
-                SetRecurrenceTypeSelection(RecurrenceType.None);
-                RecurrenceIntervalTextBox.Text = "1";
             }
             AttachmentsListBox.ItemsSource = _attachmentDisplay;
             SubtasksListBox.ItemsSource = _subTasks;
-            UpdateRecurrenceControlsEnabled(GetSelectedRecurrenceType());
         }
 
         private void AddAttachment_Click(object sender, RoutedEventArgs e)
@@ -167,35 +161,6 @@ namespace TodoWpfApp
             DateTime? dueDate = DueDatePicker.SelectedDate;
             string priority = (PriorityComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Medium";
             List<string> tags = ParseTags(TagsTextBox.Text);
-            RecurrenceType recurrenceType = GetSelectedRecurrenceType();
-            if (!int.TryParse(RecurrenceIntervalTextBox.Text, out var recurrenceInterval) || recurrenceInterval <= 0)
-            {
-                MessageBox.Show("Recurrence interval must be a positive number.");
-                return;
-            }
-            DateTime? recursUntil = RecursUntilDatePicker.SelectedDate;
-            if (recurrenceType != RecurrenceType.None)
-            {
-                if (!dueDate.HasValue)
-                {
-                    MessageBox.Show("A due date is required for recurring tasks.");
-                    return;
-                }
-                if (recursUntil.HasValue && recursUntil.Value.Date < DateTime.Today)
-                {
-                    MessageBox.Show("Recurrence end date cannot be in the past.");
-                    return;
-                }
-                if (recursUntil.HasValue && recursUntil.Value.Date < dueDate.Value.Date)
-                {
-                    MessageBox.Show("Recurrence end date must be on or after the first due date.");
-                    return;
-                }
-            }
-            else
-            {
-                recursUntil = null;
-            }
             List<string> attachmentsDest = new();
             string attachmentsBaseDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AttachmentsDir);
             foreach (var entry in _attachments)
@@ -267,9 +232,6 @@ namespace TodoWpfApp
                 _existingTask.Attachments = attachmentsDest;
                 _existingTask.SubTasks = newSubTasks;
                 _existingTask.Tags = tags;
-                _existingTask.RecurrenceType = recurrenceType;
-                _existingTask.RecurrenceInterval = recurrenceInterval;
-                _existingTask.RecursUntil = recursUntil;
             }
             else
             {
@@ -284,10 +246,7 @@ namespace TodoWpfApp
                     Completed = false,
                     Attachments = attachmentsDest,
                     SubTasks = newSubTasks,
-                    Tags = tags,
-                    RecurrenceType = recurrenceType,
-                    RecurrenceInterval = recurrenceInterval,
-                    RecursUntil = recursUntil
+                    Tags = tags
                 };
                 _allTasks.Add(newTask);
             }
@@ -311,47 +270,5 @@ namespace TodoWpfApp
             Close();
         }
 
-        private void RecurrenceTypeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            UpdateRecurrenceControlsEnabled(GetSelectedRecurrenceType());
-        }
-
-        private RecurrenceType GetSelectedRecurrenceType()
-        {
-            if (RecurrenceTypeComboBox.SelectedItem is ComboBoxItem item && item.Tag is RecurrenceType recurrenceType)
-            {
-                return recurrenceType;
-            }
-
-            return RecurrenceType.None;
-        }
-
-        private void SetRecurrenceTypeSelection(RecurrenceType recurrenceType)
-        {
-            foreach (ComboBoxItem item in RecurrenceTypeComboBox.Items)
-            {
-                if (item.Tag is RecurrenceType rt && rt == recurrenceType)
-                {
-                    RecurrenceTypeComboBox.SelectedItem = item;
-                    break;
-                }
-            }
-        }
-
-        private void UpdateRecurrenceControlsEnabled(RecurrenceType recurrenceType)
-        {
-            bool enabled = recurrenceType != RecurrenceType.None;
-            // Controls can be null during window initialization when the selection changed
-            // event fires before all named elements are wired up. Guard the access to avoid
-            // a spurious NullReferenceException.
-            if (RecurrenceIntervalTextBox != null)
-            {
-                RecurrenceIntervalTextBox.IsEnabled = enabled;
-            }
-            if (RecursUntilDatePicker != null)
-            {
-                RecursUntilDatePicker.IsEnabled = enabled;
-            }
-        }
     }
 }

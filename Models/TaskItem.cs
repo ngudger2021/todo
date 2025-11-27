@@ -5,14 +5,6 @@ using System.Text.Json.Serialization;
 
 namespace TodoWpfApp.Models
 {
-    public enum RecurrenceType
-    {
-        None,
-        Daily,
-        Weekly,
-        Monthly
-    }
-
     /// <summary>
     /// Represents a single task in the to‑do list.  Tasks hold metadata
     /// including title, description, due date, priority, completion state,
@@ -29,9 +21,6 @@ namespace TodoWpfApp.Models
         private DateTime _createdAt = DateTime.Now;
         private DateTime? _completedAt;
         private List<string> _tags = new();
-        private RecurrenceType _recurrenceType = RecurrenceType.None;
-        private int _recurrenceInterval = 1;
-        private DateTime? _recursUntil;
 
         [JsonPropertyName("id")]
         public Guid Id { get; set; } = Guid.NewGuid();
@@ -165,49 +154,6 @@ namespace TodoWpfApp.Models
                 _tags = value ?? new List<string>();
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Tags)));
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TagsDisplay)));
-            }
-        }
-
-        [JsonPropertyName("recurrence_type")]
-        [JsonConverter(typeof(JsonStringEnumConverter))]
-        public RecurrenceType RecurrenceType
-        {
-            get => _recurrenceType;
-            set
-            {
-                if (_recurrenceType != value)
-                {
-                    _recurrenceType = value;
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(RecurrenceType)));
-                }
-            }
-        }
-
-        [JsonPropertyName("recurrence_interval")]
-        public int RecurrenceInterval
-        {
-            get => _recurrenceInterval;
-            set
-            {
-                if (_recurrenceInterval != value)
-                {
-                    _recurrenceInterval = value;
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(RecurrenceInterval)));
-                }
-            }
-        }
-
-        [JsonPropertyName("recurs_until")]
-        public DateTime? RecursUntil
-        {
-            get => _recursUntil;
-            set
-            {
-                if (_recursUntil != value)
-                {
-                    _recursUntil = value;
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(RecursUntil)));
-                }
             }
         }
 

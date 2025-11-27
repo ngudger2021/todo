@@ -5,7 +5,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -123,7 +122,6 @@ namespace TodoWpfApp
                 {
                     PropertyNameCaseInsensitive = true,
                 };
-                options.Converters.Add(new JsonStringEnumConverter());
 
                 TaskDataContainer? container = null;
                 try
@@ -179,10 +177,6 @@ namespace TodoWpfApp
                     st.Tags ??= new List<string>();
                 }
                 t.Tags ??= new List<string>();
-                if (t.RecurrenceInterval <= 0)
-                {
-                    t.RecurrenceInterval = 1;
-                }
                 if (t.CreatedAt == default)
                 {
                     t.CreatedAt = DateTime.Now;
@@ -423,6 +417,11 @@ namespace TodoWpfApp
                 MessageBox.Show("Please select a task to mark complete.");
                 return;
             }
+            if (task.SubTasks.Any(st => !st.Completed))
+            {
+                MessageBox.Show("All subtasks must be completed before completing the parent task.");
+                return;
+            }
             if (!task.Completed)
             {
                 task.Completed = true;
@@ -432,12 +431,6 @@ namespace TodoWpfApp
                 }
                 var entry = EnsureHistoryEntry(task);
                 entry.CompletedAt ??= task.CompletedAt;
-                var nextTask = CreateNextRecurringInstance(task);
-                if (nextTask != null)
-                {
-                    _tasks.Add(nextTask);
-                    EnsureHistoryEntry(nextTask);
-                }
                 SaveTasksAndRefresh();
             }
             else
@@ -456,55 +449,25 @@ namespace TodoWpfApp
             var confirm = MessageBox.Show($"Delete task '{task.Title}'? This will remove the task permanently.", "Delete Task", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (confirm != MessageBoxResult.Yes)
                 return;
-            // Remove task-level attachments that are no longer referenced anywhere else
-            foreach (var relName in task.Attachments)
-            {
-                bool stillUsed = false;
-                foreach (var t in _tasks)
-                {
-                    if (t == task) continue;
-                    if (t.Attachments.Contains(relName)) { stillUsed = true; break; }
-                    foreach (var st in t.SubTasks)
-                    {
-                        if (st.Attachments.Contains(relName)) { stillUsed = true; break; }
-                    }
-                    if (stillUsed) break;
-                }
-                if (stillUsed)
-                    continue;
-                if (Path.IsPathRooted(relName))
-                    continue;
-                var attachPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AttachmentsDir, relName);
-                if (File.Exists(attachPath))
-                {
-                    try { File.Delete(attachPath); } catch { }
-                }
-            }
-            // Remove attachments from subtasks that are no longer referenced anywhere else
+            // Remove attachments from the task and all its subtasks
+            var attachmentNames = new HashSet<string>(task.Attachments ?? new List<string>());
             foreach (var st in task.SubTasks)
             {
                 foreach (var relName in st.Attachments)
                 {
-                    bool stillUsed = false;
-                    foreach (var t in _tasks)
-                    {
-                        if (t == task) continue;
-                        if (t.Attachments.Contains(relName)) { stillUsed = true; break; }
-                        foreach (var st2 in t.SubTasks)
-                        {
-                            if (st2.Attachments.Contains(relName)) { stillUsed = true; break; }
-                        }
-                        if (stillUsed) break;
-                    }
-                    if (stillUsed)
-                        continue;
-                    if (Path.IsPathRooted(relName))
-                        continue;
-                    var attachPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AttachmentsDir, relName);
-                    if (File.Exists(attachPath))
-                    {
-                        try { File.Delete(attachPath); } catch { }
-                    }
+                    attachmentNames.Add(relName);
+                }
+            }
+            foreach (var relName in attachmentNames)
+            {
+                if (Path.IsPathRooted(relName))
+                {
+                    continue;
+                }
+                var attachPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AttachmentsDir, relName);
+                if (File.Exists(attachPath))
+                {
+                    try { File.Delete(attachPath); } catch { }
                 }
             }
             var historyEntry = EnsureHistoryEntry(task);
@@ -535,8 +498,18 @@ namespace TodoWpfApp
 
         private void Subtask_CheckChanged(object sender, RoutedEventArgs e)
         {
+            if (TasksGrid.SelectedItem is TaskItem task)
+            {
+                if (task.SubTasks.Any(st => !st.Completed) && task.Completed)
+                {
+                    task.Completed = false;
+                    task.CompletedAt = null;
+                    var historyEntry = EnsureHistoryEntry(task);
+                    historyEntry.CompletedAt = null;
+                }
+            }
             // Persist subtask state changes immediately
-            SaveTasks();
+            SaveTasksAndRefresh();
         }
 
         private void ReminderToggle_Changed(object sender, RoutedEventArgs e)
@@ -688,61 +661,6 @@ namespace TodoWpfApp
             {
                 // Ignore theme load errors and keep existing theme.
             }
-        }
-
-        private TaskItem? CreateNextRecurringInstance(TaskItem task)
-        {
-            if (task.RecurrenceType == RecurrenceType.None || !task.DueDate.HasValue)
-            {
-                return null;
-            }
-
-            int interval = Math.Max(1, task.RecurrenceInterval);
-            DateTime nextDue = task.DueDate.Value;
-            try
-            {
-                nextDue = task.RecurrenceType switch
-                {
-                    RecurrenceType.Daily => nextDue.AddDays(interval),
-                    RecurrenceType.Weekly => nextDue.AddDays(7 * interval),
-                    RecurrenceType.Monthly => nextDue.AddMonths(interval),
-                    _ => nextDue
-                };
-            }
-            catch
-            {
-                return null;
-            }
-
-            if (task.RecursUntil.HasValue && nextDue.Date > task.RecursUntil.Value.Date)
-            {
-                return null;
-            }
-
-            return new TaskItem
-            {
-                Id = Guid.NewGuid(),
-                Title = task.Title,
-                Description = task.Description,
-                DueDate = nextDue,
-                Priority = task.Priority,
-                Completed = false,
-                Attachments = new List<string>(task.Attachments ?? new List<string>()),
-                SubTasks = task.SubTasks.Select(st => new SubTask
-                {
-                    Title = st.Title,
-                    Description = st.Description,
-                    Completed = false,
-                    DueDate = st.DueDate,
-                    Priority = st.Priority,
-                    Attachments = new List<string>(st.Attachments ?? new List<string>()),
-                    Tags = new List<string>(st.Tags ?? new List<string>())
-                }).ToList(),
-                Tags = new List<string>(task.Tags ?? new List<string>()),
-                RecurrenceType = task.RecurrenceType,
-                RecurrenceInterval = interval,
-                RecursUntil = task.RecursUntil
-            };
         }
 
         private class DueDateGroupConverter : IValueConverter
