@@ -50,5 +50,16 @@
         <Setter Property="RowBackground" Value="{DynamicResource PrimaryBackgroundBrush}"/>
         <Setter Property="AlternatingRowBackground" Value="#FF1E6A50"/>
         <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+        <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource ControlBorderBrush}"/>
+        <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource ControlBorderBrush}"/>
+        <Setter Property="ColumnHeaderStyle">
+            <Setter.Value>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="{DynamicResource SecondaryBackgroundBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+                </Style>
+            </Setter.Value>
+        </Setter>
     </Style>
 </ResourceDictionary>
