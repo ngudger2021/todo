@@ -6,9 +6,6 @@
     "due_date": null,
     "priority": "Medium",
     "completed": false,
-    "recurrence_type": "None",
-    "recurrence_interval": 1,
-    "recurs_until": null,
     "attachments": [],
     "subtasks": [
       {
@@ -28,9 +25,6 @@
     "due_date": null,
     "priority": "Low",
     "completed": false,
-    "recurrence_type": "None",
-    "recurrence_interval": 1,
-    "recurs_until": null,
     "attachments": [],
     "subtasks": []
   }
