@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
 using System.Windows;
@@ -366,7 +367,7 @@ namespace TodoWpfApp
                 {
                     if (File.Exists(path))
                     {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        Process.Start(new ProcessStartInfo
                         {
                             FileName = path,
                             UseShellExecute = true
@@ -376,6 +377,36 @@ namespace TodoWpfApp
                 catch
                 {
                     MessageBox.Show($"Unable to open attachment: {System.IO.Path.GetFileName(path)}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Opens a subtask attachment using the relative file name stored with the subtask.
+        /// </summary>
+        private void SubtaskAttachment_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is TextBlock tb && tb.DataContext is string relName)
+            {
+                var attachPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AttachmentsDir, relName);
+                try
+                {
+                    if (File.Exists(attachPath))
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = attachPath,
+                            UseShellExecute = true
+                        });
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Attachment not found: {relName}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Unable to open attachment: {relName}\n{ex.Message}");
                 }
             }
         }

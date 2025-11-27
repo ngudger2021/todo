@@ -120,6 +120,14 @@
                                             <TextBlock Text="{Binding Title}" Margin="5,0,0,0"/>
                                         </StackPanel>
                                         <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        <TextBlock Text="Attachments:" FontWeight="Bold" Margin="0,6,0,2"/>
+                                        <ItemsControl ItemsSource="{Binding Attachments}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}" Foreground="Blue" TextDecorations="Underline" Cursor="Hand" Margin="0,0,0,2" MouseLeftButtonUp="SubtaskAttachment_Click" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                     </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
