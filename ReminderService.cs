@@ -50,6 +50,18 @@ namespace TodoWpfApp
             var leadTime = TimeSpan.FromHours(Math.Max(0, settings.LeadTimeHours));
             var windowEnd = now + leadTime;
 
+            // Allow tasks to be reminded again if their due date is pushed out of the
+            // current reminder window or if they have been completed since the last
+            // check. This prevents permanent suppression after a user snoozes a task.
+            foreach (var taskId in _notifiedTasks.ToList())
+            {
+                var task = _tasks.FirstOrDefault(t => t.Id == taskId);
+                if (task == null || task.Completed || !task.DueDate.HasValue || task.DueDate.Value > windowEnd)
+                {
+                    _notifiedTasks.Remove(taskId);
+                }
+            }
+
             var dueSoon = _tasks
                 .Where(t => t.DueDate.HasValue && !t.Completed)
                 .Where(t => t.DueDate.Value >= now && t.DueDate.Value <= windowEnd)
