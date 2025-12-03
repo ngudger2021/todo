@@ -21,7 +21,7 @@
                     <Button x:Name="CalendarButton" Content="Calendar View" Margin="2" Click="CalendarButton_Click"/>
                     <Button x:Name="HistoryButton" Content="History Report" Margin="2" Click="HistoryButton_Click"/>
                 </WrapPanel>
-                <WrapPanel VerticalAlignment="Center" ItemHeight="32" ItemWidth="240">
+                <WrapPanel VerticalAlignment="Center" ItemHeight="32">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="2">
                         <TextBlock Text="Status:" VerticalAlignment="Center"/>
                         <ComboBox x:Name="StatusFilterComboBox" Width="120" Margin="5,0,0,0" SelectionChanged="FilterBar_Changed" SelectedIndex="1">
