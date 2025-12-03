@@ -47,14 +47,6 @@
                         </ComboBox>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="2">
-                        <TextBlock Text="Theme:" VerticalAlignment="Center"/>
-                        <ComboBox x:Name="ThemeComboBox" Width="140" Margin="5,0,0,0" SelectionChanged="ThemeComboBox_SelectionChanged">
-                            <ComboBoxItem Content="Light" />
-                            <ComboBoxItem Content="Dark" />
-                            <ComboBoxItem Content="Forest" />
-                        </ComboBox>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="2">
                         <CheckBox x:Name="ReminderToggle" Content="Enable Reminders" Checked="ReminderToggle_Changed" Unchecked="ReminderToggle_Changed" VerticalAlignment="Center"/>
                         <StackPanel Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="Lead time (hours):" VerticalAlignment="Center"/>
