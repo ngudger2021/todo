@@ -27,7 +27,6 @@ namespace TodoWpfApp
         private const string AttachmentsDir = "attachments";
         private const string SettingsFile = "user_settings.json";
         private ReminderSettings _reminderSettings = ReminderSettings.CreateDefault();
-        private bool _initializingTheme;
 
         public ObservableCollection<TaskItem> Tasks => _tasks;
         public ObservableCollection<TaskHistoryEntry> TaskHistory => _taskHistory;
@@ -54,7 +53,6 @@ namespace TodoWpfApp
             RefreshTagFilterOptions();
             LoadReminderSettings();
             ApplyReminderSettingsToUi();
-            ApplyTheme(_reminderSettings.Theme, false);
         }
 
         public ReminderSettings GetReminderSettings() => _reminderSettings;
@@ -261,7 +259,6 @@ namespace TodoWpfApp
         {
             ReminderToggle.IsChecked = _reminderSettings.RemindersEnabled;
             ReminderLeadTimeTextBox.Text = _reminderSettings.LeadTimeHours.ToString();
-            SetThemeSelection(_reminderSettings.Theme);
         }
 
         private void UpdateReminderSettingsFromUi()
@@ -562,20 +559,6 @@ namespace TodoWpfApp
             }
         }
 
-        private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (_initializingTheme)
-            {
-                return;
-            }
-
-            if (ThemeComboBox?.SelectedItem is ComboBoxItem item)
-            {
-                var theme = item.Content?.ToString() ?? "Light";
-                ApplyTheme(theme);
-            }
-        }
-
         private void FilterBar_Changed(object sender, SelectionChangedEventArgs e)
         {
             _tasksView?.Refresh();
@@ -632,66 +615,6 @@ namespace TodoWpfApp
             }
 
             _tasksView.Refresh();
-        }
-
-        private void SetThemeSelection(string themeName)
-        {
-            if (ThemeComboBox == null)
-            {
-                return;
-            }
-
-            _initializingTheme = true;
-            try
-            {
-                foreach (ComboBoxItem item in ThemeComboBox.Items)
-                {
-                    if (string.Equals(item.Content?.ToString(), themeName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        ThemeComboBox.SelectedItem = item;
-                        return;
-                    }
-                }
-
-                ThemeComboBox.SelectedIndex = 0;
-            }
-            finally
-            {
-                _initializingTheme = false;
-            }
-        }
-
-        private void ApplyTheme(string themeName, bool persist = true)
-        {
-            string source = themeName switch
-            {
-                "Dark" => "Themes/DarkTheme.xaml",
-                "Forest" => "Themes/ForestTheme.xaml",
-                _ => "Themes/LightTheme.xaml"
-            };
-
-            try
-            {
-                var dictionary = new ResourceDictionary { Source = new Uri(source, UriKind.Relative) };
-                var merged = Application.Current.Resources.MergedDictionaries;
-                if (merged.Count > 0)
-                {
-                    merged[0] = dictionary;
-                }
-                else
-                {
-                    merged.Add(dictionary);
-                }
-                _reminderSettings.Theme = themeName;
-                if (persist)
-                {
-                    SaveReminderSettings();
-                }
-            }
-            catch
-            {
-                // Ignore theme load errors and keep existing theme.
-            }
         }
 
         private class DueDateGroupConverter : IValueConverter
