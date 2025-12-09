@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Models/TaskItem.cs" Link="Models/TaskItem.cs" />
+    <Compile Include="../Models/SubTask.cs" Link="Models/SubTask.cs" />
+    <Compile Include="../Models/TaskHistoryEntry.cs" Link="Models/TaskHistoryEntry.cs" />
+    <Compile Include="../Models/TaskDataContainer.cs" Link="Models/TaskDataContainer.cs" />
+  </ItemGroup>
+</Project>
