@@ -12,7 +12,6 @@ using System.Windows.Data;
 using System.Globalization;
 using System.Windows.Input;
 using TodoWpfApp.Models;
-using System.Text.Json.Serialization;
 
 namespace TodoWpfApp
 {
