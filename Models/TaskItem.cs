@@ -21,9 +21,45 @@ namespace TodoWpfApp.Models
         private DateTime _createdAt = DateTime.Now.ToLocalTime();
         private DateTime? _completedAt;
         private List<string> _tags = new();
+        private int _sortOrder;
+        private int _completedPomodoros;
 
         [JsonPropertyName("id")]
         public Guid Id { get; set; } = Guid.NewGuid();
+
+        [JsonPropertyName("sort_order")]
+        public int SortOrder
+        {
+            get => _sortOrder;
+            set
+            {
+                if (_sortOrder != value)
+                {
+                    _sortOrder = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SortOrder)));
+                }
+            }
+        }
+
+        [JsonPropertyName("recurrence")]
+        public RecurrenceRule? Recurrence { get; set; }
+
+        [JsonPropertyName("depends_on")]
+        public List<Guid> DependsOn { get; set; } = new();
+
+        [JsonPropertyName("completed_pomodoros")]
+        public int CompletedPomodoros
+        {
+            get => _completedPomodoros;
+            set
+            {
+                if (_completedPomodoros != value)
+                {
+                    _completedPomodoros = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CompletedPomodoros)));
+                }
+            }
+        }
 
         [JsonPropertyName("title")]
         public string Title

@@ -5,6 +5,14 @@
         xmlns:models="clr-namespace:TodoWpfApp.Models"
         Icon="/ChatGPT Image Jan 29, 2026, 02_10_29 PM.png"
         Title="To-Do 2.0" Height="800" Width="1100" MinHeight="600" MinWidth="900">
+    <Window.InputBindings>
+        <KeyBinding Key="N" Modifiers="Ctrl" Command="{Binding AddTaskCommand}"/>
+        <KeyBinding Key="E" Modifiers="Ctrl" Command="{Binding EditTaskCommand}"/>
+        <KeyBinding Key="D" Modifiers="Ctrl" Command="{Binding DeleteTaskCommand}"/>
+        <KeyBinding Key="F" Modifiers="Ctrl" Command="{Binding FocusSearchCommand}"/>
+        <KeyBinding Key="Enter" Modifiers="Ctrl" Command="{Binding CompleteTaskCommand}"/>
+        <KeyBinding Key="F5" Command="{Binding RefreshCommand}"/>
+    </Window.InputBindings>
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="119*"/>
@@ -13,19 +21,45 @@
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+        <!-- Quick Add Bar -->
+        <Border Grid.Row="0" Padding="10" Background="{DynamicResource SecondaryBackgroundBrush}" Grid.ColumnSpan="3">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="QuickAddTextBox" Grid.Column="0"
+                         local:WatermarkHelper.Watermark="Quick add: 'Buy milk tomorrow 3pm #shopping !high'"
+                         VerticalAlignment="Center" Padding="5"
+                         KeyDown="QuickAddTextBox_KeyDown"/>
+                <Button x:Name="VoiceInputButton" Grid.Column="1" Content="🎤 Voice" Width="80"
+                        Margin="5,0,0,0" Click="VoiceInputButton_Click" ToolTip="Voice input"/>
+                <Button x:Name="QuickAddButton" Grid.Column="2" Content="➕ Add" Width="80"
+                        Margin="5,0,0,0" Click="QuickAddButton_Click"/>
+            </Grid>
+        </Border>
+
         <!-- Control bar split across two rows so buttons and filters always fit without horizontal scrolling -->
-        <Border Grid.Row="0" Padding="10" Background="{DynamicResource SecondaryBackgroundBrush}" Grid.ColumnSpan="3" Margin="0,0,0,352">
+        <Border Grid.Row="1" Padding="10" Background="{DynamicResource SecondaryBackgroundBrush}" Grid.ColumnSpan="3">
             <StackPanel>
                 <WrapPanel VerticalAlignment="Center" Margin="0,0,0,6" ItemWidth="120" ItemHeight="32">
                     <Button x:Name="AddButton" Content="Add Task" Margin="2" Click="AddButton_Click"/>
                     <Button x:Name="EditButton" Content="Edit Task" Margin="2" Click="EditButton_Click"/>
                     <Button x:Name="CompleteButton" Content="Mark Complete" Margin="2" Click="CompleteButton_Click"/>
                     <Button x:Name="DeleteButton" Content="Delete Task" Margin="2" Click="DeleteButton_Click"/>
-                    <Button x:Name="HistoryButton" Content="History Report" Margin="2" Click="HistoryButton_Click"/>
+                    <Button x:Name="PomodoroButton" Content="Pomodoro" Margin="2" Click="PomodoroButton_Click"/>
+                    <Button x:Name="GanttButton" Content="Gantt Chart" Margin="2" Click="GanttButton_Click"/>
+                    <Button x:Name="StatisticsButton" Content="Statistics" Margin="2" Click="StatisticsButton_Click"/>
+                    <Button x:Name="ExportButton" Content="Export" Margin="2" Click="ExportButton_Click"/>
+                    <Button x:Name="SyncButton" Content="Sync" Margin="2" Click="SyncButton_Click"/>
+                    <Button x:Name="HistoryButton" Content="History" Margin="2" Click="HistoryButton_Click"/>
                     <Button x:Name="NotificationsButton" Content="Notifications" Margin="2" Click="NotificationsButton_Click"/>
+                    <Button x:Name="HelpButton" Content="Shortcuts" Margin="2" Click="HelpButton_Click"/>
                 </WrapPanel>
                 <WrapPanel VerticalAlignment="Center" ItemHeight="32">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="2">
@@ -64,13 +98,17 @@
         </Border>
 
         <!-- Main content area keeps grid and details side by side to utilise full width -->
-        <Grid Margin="5,95,5,5" Grid.ColumnSpan="3" Grid.RowSpan="2">
+        <Grid Grid.Row="2" Margin="5" Grid.ColumnSpan="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <DataGrid x:Name="TasksGrid" Grid.Column="0" AutoGenerateColumns="False" Margin="0,0,5,0" SelectionMode="Single" SelectionChanged="TasksGrid_SelectionChanged" CanUserSortColumns="True"  MouseDoubleClick="TasksGrid_MouseDoubleClick">
+            <DataGrid x:Name="TasksGrid" Grid.Column="0" AutoGenerateColumns="False" Margin="0,0,5,0"
+                      SelectionMode="Single" SelectionChanged="TasksGrid_SelectionChanged"
+                      CanUserSortColumns="True" MouseDoubleClick="TasksGrid_MouseDoubleClick"
+                      AllowDrop="True" PreviewMouseLeftButtonDown="TasksGrid_PreviewMouseLeftButtonDown"
+                      Drop="TasksGrid_Drop" DragOver="TasksGrid_DragOver">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Title" Binding="{Binding Title}" SortMemberPath="Title" Width="2*"/>
                     <DataGridTextColumn Header="Due Date" Binding="{Binding DueDate, StringFormat=d}" SortMemberPath="DueDate" Width="*"/>

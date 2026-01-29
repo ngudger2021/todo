@@ -21,6 +21,9 @@ namespace TodoWpfApp
         private readonly List<(bool IsNew, string Path)> _attachments = new();
         private readonly ObservableCollection<string> _attachmentDisplay = new();
         private readonly ObservableCollection<SubTask> _subTasks = new();
+        private readonly List<Guid> _dependencies = new();
+        private readonly ObservableCollection<string> _dependencyDisplay = new();
+        private RecurrenceRule? _recurrence;
         private const string AttachmentsDir = "attachments";
 
         public AddEditTaskWindow(TaskItem? task, ObservableCollection<TaskItem> allTasks)
@@ -65,6 +68,28 @@ namespace TodoWpfApp
                         Tags = new List<string>(st.Tags ?? new List<string>())
                     });
                 }
+
+                // Load recurrence
+                _recurrence = task.Recurrence;
+                if (_recurrence != null && _recurrence.Type != RecurrenceType.None)
+                {
+                    RecurrenceTypeComboBox.SelectedIndex = (int)_recurrence.Type;
+                    RecurrenceIntervalTextBox.Text = _recurrence.Interval.ToString();
+                }
+
+                // Load dependencies
+                if (task.DependsOn != null)
+                {
+                    foreach (var depId in task.DependsOn)
+                    {
+                        var depTask = _allTasks.FirstOrDefault(t => t.Id == depId);
+                        if (depTask != null)
+                        {
+                            _dependencies.Add(depId);
+                            _dependencyDisplay.Add(depTask.Title);
+                        }
+                    }
+                }
             }
             else
             {
@@ -74,6 +99,7 @@ namespace TodoWpfApp
             }
             AttachmentsListBox.ItemsSource = _attachmentDisplay;
             SubtasksListBox.ItemsSource = _subTasks;
+            DependenciesListBox.ItemsSource = _dependencyDisplay;
         }
 
         private void AddAttachment_Click(object sender, RoutedEventArgs e)
@@ -232,6 +258,8 @@ namespace TodoWpfApp
                 _existingTask.Attachments = attachmentsDest;
                 _existingTask.SubTasks = newSubTasks;
                 _existingTask.Tags = tags;
+                _existingTask.Recurrence = BuildRecurrenceRule();
+                _existingTask.DependsOn = new List<Guid>(_dependencies);
             }
             else
             {
@@ -246,7 +274,9 @@ namespace TodoWpfApp
                     Completed = false,
                     Attachments = attachmentsDest,
                     SubTasks = newSubTasks,
-                    Tags = tags
+                    Tags = tags,
+                    Recurrence = BuildRecurrenceRule(),
+                    DependsOn = new List<Guid>(_dependencies)
                 };
                 _allTasks.Add(newTask);
             }
@@ -268,6 +298,140 @@ namespace TodoWpfApp
         {
             DialogResult = false;
             Close();
+        }
+
+        private void RecurrenceTypeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (RecurrenceTypeComboBox == null || RecurrenceIntervalPanel == null)
+                return;
+
+            var selectedIndex = RecurrenceTypeComboBox.SelectedIndex;
+            if (selectedIndex > 0) // Not "None"
+            {
+                RecurrenceIntervalPanel.Visibility = Visibility.Visible;
+                RecurrenceIntervalLabel.Text = selectedIndex switch
+                {
+                    1 => "day(s)",
+                    2 => "week(s)",
+                    3 => "month(s)",
+                    _ => "unit(s)"
+                };
+            }
+            else
+            {
+                RecurrenceIntervalPanel.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void AddDependency_Click(object sender, RoutedEventArgs e)
+        {
+            // Show a list of available tasks to select as dependency
+            var availableTasks = _allTasks
+                .Where(t => t != _existingTask) // Can't depend on self
+                .ToList();
+
+            if (!availableTasks.Any())
+            {
+                MessageBox.Show("No other tasks available to add as dependency.");
+                return;
+            }
+
+            var selectionWindow = new Window
+            {
+                Title = "Select Dependency",
+                Width = 400,
+                Height = 300,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this
+            };
+
+            var listBox = new ListBox
+            {
+                ItemsSource = availableTasks,
+                DisplayMemberPath = "Title",
+                Margin = new Thickness(10)
+            };
+
+            var okButton = new Button
+            {
+                Content = "OK",
+                Width = 80,
+                Height = 30,
+                Margin = new Thickness(5)
+            };
+
+            var cancelButton = new Button
+            {
+                Content = "Cancel",
+                Width = 80,
+                Height = 30,
+                Margin = new Thickness(5)
+            };
+
+            var buttonPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(10)
+            };
+            buttonPanel.Children.Add(okButton);
+            buttonPanel.Children.Add(cancelButton);
+
+            var mainPanel = new DockPanel();
+            DockPanel.SetDock(buttonPanel, Dock.Bottom);
+            mainPanel.Children.Add(buttonPanel);
+            mainPanel.Children.Add(listBox);
+
+            selectionWindow.Content = mainPanel;
+
+            TaskItem? selectedTask = null;
+            okButton.Click += (s, args) =>
+            {
+                selectedTask = listBox.SelectedItem as TaskItem;
+                selectionWindow.DialogResult = true;
+                selectionWindow.Close();
+            };
+            cancelButton.Click += (s, args) =>
+            {
+                selectionWindow.DialogResult = false;
+                selectionWindow.Close();
+            };
+
+            if (selectionWindow.ShowDialog() == true && selectedTask != null)
+            {
+                if (!_dependencies.Contains(selectedTask.Id))
+                {
+                    _dependencies.Add(selectedTask.Id);
+                    _dependencyDisplay.Add(selectedTask.Title);
+                }
+            }
+        }
+
+        private void RemoveDependency_Click(object sender, RoutedEventArgs e)
+        {
+            int index = DependenciesListBox.SelectedIndex;
+            if (index >= 0 && index < _dependencies.Count)
+            {
+                _dependencies.RemoveAt(index);
+                _dependencyDisplay.RemoveAt(index);
+            }
+        }
+
+        private RecurrenceRule? BuildRecurrenceRule()
+        {
+            var selectedIndex = RecurrenceTypeComboBox.SelectedIndex;
+            if (selectedIndex == 0) // None
+                return null;
+
+            int interval = 1;
+            if (!int.TryParse(RecurrenceIntervalTextBox.Text, out interval) || interval < 1)
+                interval = 1;
+
+            return new RecurrenceRule
+            {
+                Type = (RecurrenceType)selectedIndex,
+                Interval = interval
+            };
         }
 
     }

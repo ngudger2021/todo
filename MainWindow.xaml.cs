@@ -15,6 +15,9 @@ using TodoWpfApp.Models;
 using System.Text.Json.Serialization;
 using System.Windows.Media;
 using System.Windows.Threading;
+using TodoWpfApp.Services;
+using Microsoft.Win32;
+using System.Speech.Recognition;
 
 namespace TodoWpfApp
 {
@@ -37,6 +40,10 @@ namespace TodoWpfApp
         private bool _notificationFlashOn;
         private Brush? _notificationDefaultBackground;
         private Brush? _notificationDefaultForeground;
+        private ISyncService? _syncService;
+        private SpeechRecognitionEngine? _speechRecognizer;
+        private bool _isListening = false;
+        private TaskItem? _draggedTask;
 
         public ObservableCollection<TaskItem> Tasks => _tasks;
         public ObservableCollection<TaskHistoryEntry> TaskHistory => _taskHistory;
@@ -65,6 +72,9 @@ namespace TodoWpfApp
             ApplyReminderSettingsToUi();
             LoadNotifications();
             InitializeNotificationIndicator();
+            InitializeSyncService();
+            InitializeKeyboardCommands();
+            InitializeSpeechRecognition();
         }
 
         private void TasksGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -488,6 +498,10 @@ namespace TodoWpfApp
                 MessageBox.Show("All subtasks must be completed before completing the parent task.");
                 return;
             }
+            if (!CanCompleteTask(task))
+            {
+                return;
+            }
             if (!task.Completed)
             {
                 task.Completed = true;
@@ -497,6 +511,7 @@ namespace TodoWpfApp
                 }
                 var entry = EnsureHistoryEntry(task);
                 entry.CompletedAt ??= task.CompletedAt;
+                HandleRecurringTaskCompletion(task);
                 SaveTasksAndRefresh();
             }
             else
@@ -949,5 +964,501 @@ namespace TodoWpfApp
             TasksGrid.ScrollIntoView(task);
             UpdateDetails();
         }
+
+        // ==================== NEW FEATURE IMPLEMENTATIONS ====================
+
+        #region Quick Add with Natural Language Parsing
+
+        private void QuickAddTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                ProcessQuickAdd();
+                e.Handled = true;
+            }
+        }
+
+        private void QuickAddButton_Click(object sender, RoutedEventArgs e)
+        {
+            ProcessQuickAdd();
+        }
+
+        private void ProcessQuickAdd()
+        {
+            string input = QuickAddTextBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(input))
+                return;
+
+            var parsed = NaturalLanguageParser.Parse(input);
+
+            if (string.IsNullOrWhiteSpace(parsed.Title))
+            {
+                MessageBox.Show("Please enter a task title.");
+                return;
+            }
+
+            var newTask = new TaskItem
+            {
+                Id = Guid.NewGuid(),
+                Title = parsed.Title,
+                DueDate = parsed.DueDate,
+                Priority = parsed.Priority,
+                Tags = parsed.Tags,
+                CreatedAt = DateTime.Now,
+                Completed = false
+            };
+
+            _tasks.Add(newTask);
+            EnsureHistoryEntry(newTask);
+            SaveTasks();
+            _tasksView?.Refresh();
+            RefreshTagFilterOptions();
+
+            QuickAddTextBox.Text = string.Empty;
+            MessageBox.Show($"Task added: {newTask.Title}", "Quick Add", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        #endregion
+
+        #region Voice Input
+
+        private void InitializeSpeechRecognition()
+        {
+            try
+            {
+                _speechRecognizer = new SpeechRecognitionEngine(new CultureInfo("en-US"));
+                _speechRecognizer.SetInputToDefaultAudioDevice();
+
+                // Create a grammar for general dictation
+                var dictationGrammar = new DictationGrammar();
+                _speechRecognizer.LoadGrammar(dictationGrammar);
+
+                _speechRecognizer.SpeechRecognized += SpeechRecognizer_SpeechRecognized;
+            }
+            catch
+            {
+                // Speech recognition not available
+                if (VoiceInputButton != null)
+                {
+                    VoiceInputButton.IsEnabled = false;
+                    VoiceInputButton.ToolTip = "Speech recognition not available";
+                }
+            }
+        }
+
+        private void VoiceInputButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_speechRecognizer == null)
+            {
+                MessageBox.Show("Speech recognition is not available on this system.");
+                return;
+            }
+
+            if (!_isListening)
+            {
+                try
+                {
+                    _speechRecognizer.RecognizeAsync(RecognizeMode.Multiple);
+                    _isListening = true;
+                    VoiceInputButton.Content = "🎤 Listening...";
+                    VoiceInputButton.Background = Brushes.LightGreen;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to start voice recognition: {ex.Message}");
+                }
+            }
+        }
+
+        private void SpeechRecognizer_SpeechRecognized(object? sender, SpeechRecognizedEventArgs e)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                QuickAddTextBox.Text = e.Result.Text;
+                _isListening = false;
+                VoiceInputButton.Content = "🎤 Voice";
+                VoiceInputButton.Background = SystemColors.ControlBrush;
+
+                // Auto-process if confidence is high
+                if (e.Result.Confidence > 0.7)
+                {
+                    ProcessQuickAdd();
+                }
+            });
+        }
+
+        #endregion
+
+        #region Pomodoro Timer
+
+        private void PomodoroButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (TasksGrid.SelectedItem is not TaskItem task)
+            {
+                MessageBox.Show("Please select a task to start a Pomodoro session.");
+                return;
+            }
+
+            var pomodoroWindow = new PomodoroWindow(task, () =>
+            {
+                SaveTasks();
+                _tasksView?.Refresh();
+            });
+            pomodoroWindow.Owner = this;
+            pomodoroWindow.Show();
+        }
+
+        #endregion
+
+        #region Gantt Chart
+
+        private void GanttButton_Click(object sender, RoutedEventArgs e)
+        {
+            var ganttWindow = new GanttChartWindow(_tasks);
+            ganttWindow.Owner = this;
+            ganttWindow.Show();
+        }
+
+        #endregion
+
+        #region Cloud Sync
+
+        private void InitializeSyncService()
+        {
+            string dataPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DataFile);
+            _syncService = new FileSyncService(dataPath);
+        }
+
+        private async void SyncButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_syncService == null)
+            {
+                MessageBox.Show("Sync service is not initialized.");
+                return;
+            }
+
+            if (!_syncService.IsSyncConfigured())
+            {
+                // Show configuration dialog
+                var folderDialog = new System.Windows.Forms.FolderBrowserDialog
+                {
+                    Description = "Select sync folder (e.g., OneDrive, Dropbox folder)",
+                    ShowNewFolderButton = true
+                };
+
+                if (folderDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    _syncService.SetSyncFolder(folderDialog.SelectedPath);
+                }
+                else
+                {
+                    return;
+                }
+            }
+
+            SyncButton.IsEnabled = false;
+            SyncButton.Content = "Syncing...";
+
+            try
+            {
+                var result = await _syncService.SyncAsync();
+
+                if (result.Success)
+                {
+                    MessageBox.Show(result.Message, "Sync Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                    // Reload if data was downloaded
+                    if (result.Action == SyncAction.DownloadedFromRemote || result.Action == SyncAction.Merged)
+                    {
+                        LoadTasks();
+                        _tasksView?.Refresh();
+                        UpdateDetails();
+                        RefreshTagFilterOptions();
+                    }
+                }
+                else
+                {
+                    MessageBox.Show(result.Message, "Sync Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Sync error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                SyncButton.IsEnabled = true;
+                SyncButton.Content = "Sync";
+            }
+        }
+
+        #endregion
+
+        #region Export
+
+        private void ExportButton_Click(object sender, RoutedEventArgs e)
+        {
+            var menu = new ContextMenu();
+
+            var csvItem = new MenuItem { Header = "Export to CSV" };
+            csvItem.Click += (s, args) => ExportToCsv();
+            menu.Items.Add(csvItem);
+
+            var pdfItem = new MenuItem { Header = "Export to Text/PDF" };
+            pdfItem.Click += (s, args) => ExportToTextPdf();
+            menu.Items.Add(pdfItem);
+
+            var historyItem = new MenuItem { Header = "Export History to CSV" };
+            historyItem.Click += (s, args) => ExportHistoryToCsv();
+            menu.Items.Add(historyItem);
+
+            menu.PlacementTarget = ExportButton;
+            menu.IsOpen = true;
+        }
+
+        private void ExportToCsv()
+        {
+            var saveDialog = new SaveFileDialog
+            {
+                Filter = "CSV files (*.csv)|*.csv",
+                FileName = $"tasks_{DateTime.Now:yyyy-MM-dd}.csv"
+            };
+
+            if (saveDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    ExportService.ExportToCsv(_tasks, saveDialog.FileName);
+                    MessageBox.Show("Tasks exported successfully!", "Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Export failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void ExportToTextPdf()
+        {
+            var saveDialog = new SaveFileDialog
+            {
+                Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                FileName = $"tasks_report_{DateTime.Now:yyyy-MM-dd}.txt"
+            };
+
+            if (saveDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    ExportService.ExportToTextPdf(_tasks, saveDialog.FileName);
+                    MessageBox.Show("Report exported successfully!", "Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Export failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void ExportHistoryToCsv()
+        {
+            var saveDialog = new SaveFileDialog
+            {
+                Filter = "CSV files (*.csv)|*.csv",
+                FileName = $"task_history_{DateTime.Now:yyyy-MM-dd}.csv"
+            };
+
+            if (saveDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    ExportService.ExportHistoryToCsv(_taskHistory, saveDialog.FileName);
+                    MessageBox.Show("History exported successfully!", "Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Export failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        #endregion
+
+        #region Keyboard Shortcuts
+
+        private void InitializeKeyboardCommands()
+        {
+            // Commands are bound in XAML, but we need to provide implementations
+            this.CommandBindings.Add(new CommandBinding(ApplicationCommands.New, (s, e) => AddButton_Click(s, e)));
+            this.CommandBindings.Add(new CommandBinding(ApplicationCommands.Delete, (s, e) => DeleteButton_Click(s, e)));
+        }
+
+        private void HelpButton_Click(object sender, RoutedEventArgs e)
+        {
+            string shortcuts = @"Keyboard Shortcuts:
+
+Ctrl+N - Add New Task
+Ctrl+E - Edit Selected Task
+Ctrl+D - Delete Selected Task
+Ctrl+F - Focus Search Box
+Ctrl+Enter - Complete Selected Task
+F5 - Refresh View
+
+Quick Add Format:
+Type naturally: 'Buy milk tomorrow 3pm #shopping !high'
+- #tag for tags
+- !high, !medium, !low for priority
+- today, tomorrow, monday-sunday for dates
+- 3pm, 14:00, 9:30am for times";
+
+            MessageBox.Show(shortcuts, "Keyboard Shortcuts", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        #endregion
+
+        #region Statistics
+
+        private void StatisticsButton_Click(object sender, RoutedEventArgs e)
+        {
+            var statsWindow = new StatisticsWindow(_tasks, _taskHistory);
+            statsWindow.Owner = this;
+            statsWindow.Show();
+        }
+
+        #endregion
+
+        #region Drag and Drop
+
+        private void TasksGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.OriginalSource is FrameworkElement element)
+            {
+                var row = FindVisualParent<DataGridRow>(element);
+                if (row != null && row.Item is TaskItem task)
+                {
+                    _draggedTask = task;
+                    DragDrop.DoDragDrop(TasksGrid, task, DragDropEffects.Move);
+                }
+            }
+        }
+
+        private void TasksGrid_DragOver(object sender, DragEventArgs e)
+        {
+            e.Effects = DragDropEffects.Move;
+            e.Handled = true;
+        }
+
+        private void TasksGrid_Drop(object sender, DragEventArgs e)
+        {
+            if (_draggedTask == null)
+                return;
+
+            var targetElement = e.OriginalSource as FrameworkElement;
+            var targetRow = FindVisualParent<DataGridRow>(targetElement);
+
+            if (targetRow != null && targetRow.Item is TaskItem targetTask && targetTask != _draggedTask)
+            {
+                int draggedIndex = _tasks.IndexOf(_draggedTask);
+                int targetIndex = _tasks.IndexOf(targetTask);
+
+                if (draggedIndex >= 0 && targetIndex >= 0)
+                {
+                    _tasks.Move(draggedIndex, targetIndex);
+
+                    // Update sort order
+                    for (int i = 0; i < _tasks.Count; i++)
+                    {
+                        _tasks[i].SortOrder = i;
+                    }
+
+                    SaveTasks();
+                    _tasksView?.Refresh();
+                }
+            }
+
+            _draggedTask = null;
+        }
+
+        private T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+        {
+            while (child != null)
+            {
+                if (child is T parent)
+                    return parent;
+                child = VisualTreeHelper.GetParent(child);
+            }
+            return null;
+        }
+
+        #endregion
+
+        #region Recurring Tasks Support
+
+        private void HandleRecurringTaskCompletion(TaskItem task)
+        {
+            if (task.Recurrence == null || task.Recurrence.Type == RecurrenceType.None)
+                return;
+
+            var nextDueDate = task.Recurrence.CalculateNextOccurrence(DateTime.Now);
+            if (nextDueDate.HasValue)
+            {
+                var result = MessageBox.Show(
+                    $"This is a recurring task. Create next occurrence due on {nextDueDate.Value:d}?",
+                    "Recurring Task",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    var nextTask = new TaskItem
+                    {
+                        Id = Guid.NewGuid(),
+                        Title = task.Title,
+                        Description = task.Description,
+                        Priority = task.Priority,
+                        Tags = new List<string>(task.Tags),
+                        DueDate = nextDueDate,
+                        Recurrence = task.Recurrence,
+                        CreatedAt = DateTime.Now,
+                        Completed = false
+                    };
+
+                    _tasks.Add(nextTask);
+                    EnsureHistoryEntry(nextTask);
+                    SaveTasks();
+                    _tasksView?.Refresh();
+                }
+            }
+        }
+
+        #endregion
+
+        #region Task Dependencies Validation
+
+        private bool CanCompleteTask(TaskItem task)
+        {
+            if (task.DependsOn == null || !task.DependsOn.Any())
+                return true;
+
+            var incompleteDeps = task.DependsOn
+                .Select(depId => _tasks.FirstOrDefault(t => t.Id == depId))
+                .Where(t => t != null && !t.Completed)
+                .ToList();
+
+            if (incompleteDeps.Any())
+            {
+                var depNames = string.Join(", ", incompleteDeps.Select(t => t!.Title));
+                MessageBox.Show(
+                    $"Cannot complete this task. The following dependencies must be completed first:\n\n{depNames}",
+                    "Incomplete Dependencies",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            return true;
+        }
+
+        #endregion
     }
 }
