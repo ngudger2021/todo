@@ -18,7 +18,7 @@ namespace TodoWpfApp.Models
         private DateTime? _dueDate;
         private string _priority = "Medium";
         private bool _completed;
-        private DateTime _createdAt = DateTime.Now;
+        private DateTime _createdAt = DateTime.Now.ToLocalTime();
         private DateTime? _completedAt;
         private List<string> _tags = new();
 

@@ -16,7 +16,7 @@ namespace TodoWpfApp
             MainWindow = mainWindow;
             mainWindow.Show();
 
-            _reminderService = new ReminderService(mainWindow, mainWindow.Tasks, mainWindow.GetReminderSettings);
+            _reminderService = new ReminderService(mainWindow.Tasks, mainWindow.GetReminderSettings, mainWindow.HandleReminderNotification);
             _reminderService.Start();
         }
 

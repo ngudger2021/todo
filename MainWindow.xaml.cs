@@ -12,6 +12,9 @@ using System.Windows.Data;
 using System.Globalization;
 using System.Windows.Input;
 using TodoWpfApp.Models;
+using System.Text.Json.Serialization;
+using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace TodoWpfApp
 {
@@ -26,7 +29,14 @@ namespace TodoWpfApp
         private const string DataFile = "todo_data.json";
         private const string AttachmentsDir = "attachments";
         private const string SettingsFile = "user_settings.json";
+        private const string NotificationsFile = "notifications.json";
         private ReminderSettings _reminderSettings = ReminderSettings.CreateDefault();
+        private readonly ObservableCollection<NotificationItem> _notifications = new();
+        private NotificationCenterWindow? _notificationCenterWindow;
+        private DispatcherTimer? _notificationFlashTimer;
+        private bool _notificationFlashOn;
+        private Brush? _notificationDefaultBackground;
+        private Brush? _notificationDefaultForeground;
 
         public ObservableCollection<TaskItem> Tasks => _tasks;
         public ObservableCollection<TaskHistoryEntry> TaskHistory => _taskHistory;
@@ -53,15 +63,42 @@ namespace TodoWpfApp
             RefreshTagFilterOptions();
             LoadReminderSettings();
             ApplyReminderSettingsToUi();
+            LoadNotifications();
+            InitializeNotificationIndicator();
         }
 
+        private void TasksGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (TasksGrid.SelectedItem is not TaskItem task)
+            {
+                MessageBox.Show("Please select a task to edit.");
+                return;
+            }
+            EndTasksGridEdit();
+            var window = new AddEditTaskWindow(task, _tasks);
+            window.Owner = this;
+            if (window.ShowDialog() == true)
+            {
+                SaveTasks();
+                RefreshTasksViewSafe();
+                UpdateDetails();
+                RefreshTagFilterOptions();
+            }
+        }
+
+
         public ReminderSettings GetReminderSettings() => _reminderSettings;
+
+        public void HandleReminderNotification(TaskItem task)
+        {
+            AddNotificationFromTask(task);
+        }
 
         internal void SaveTasksAndRefresh()
         {
             SyncHistoryMetadata();
             SaveTasks();
-            _tasksView?.Refresh();
+            RefreshTasksViewSafe();
             UpdateDetails();
         }
 
@@ -427,12 +464,13 @@ namespace TodoWpfApp
                 MessageBox.Show("Please select a task to edit.");
                 return;
             }
+            EndTasksGridEdit();
             var window = new AddEditTaskWindow(task, _tasks);
             window.Owner = this;
             if (window.ShowDialog() == true)
             {
                 SaveTasks();
-                _tasksView?.Refresh();
+                RefreshTasksViewSafe();
                 UpdateDetails();
                 RefreshTagFilterOptions();
             }
@@ -506,15 +544,6 @@ namespace TodoWpfApp
             RefreshTagFilterOptions();
         }
 
-        private void CalendarButton_Click(object sender, RoutedEventArgs e)
-        {
-            var window = new CalendarView(_tasks, SaveTasksAndRefresh)
-            {
-                Owner = this
-            };
-            window.Show();
-        }
-
         private void HistoryButton_Click(object sender, RoutedEventArgs e)
         {
             var window = new TaskHistoryWindow(_taskHistory)
@@ -522,6 +551,27 @@ namespace TodoWpfApp
                 Owner = this
             };
             window.Show();
+        }
+
+        private void NotificationsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_notificationCenterWindow == null)
+            {
+                _notificationCenterWindow = new NotificationCenterWindow(_notifications)
+                {
+                    Owner = this
+                };
+                _notificationCenterWindow.OpenTaskRequested += OpenTaskById;
+                _notificationCenterWindow.NotificationsChanged += () =>
+                {
+                    SaveNotifications();
+                    UpdateNotificationIndicator();
+                };
+                _notificationCenterWindow.Closed += (_, _) => _notificationCenterWindow = null;
+            }
+
+            _notificationCenterWindow.Show();
+            _notificationCenterWindow.Activate();
         }
 
         private void Subtask_CheckChanged(object sender, RoutedEventArgs e)
@@ -561,12 +611,12 @@ namespace TodoWpfApp
 
         private void FilterBar_Changed(object sender, SelectionChangedEventArgs e)
         {
-            _tasksView?.Refresh();
+            RefreshTasksViewSafe();
         }
 
         private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            _tasksView?.Refresh();
+            RefreshTasksViewSafe();
         }
 
         private void RefreshTagFilterOptions()
@@ -615,6 +665,33 @@ namespace TodoWpfApp
             }
 
             _tasksView.Refresh();
+        }
+
+        private void EndTasksGridEdit()
+        {
+            // Ensure the grid is not mid-edit before we refresh the view.
+            if (TasksGrid == null)
+            {
+                return;
+            }
+            TasksGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+            TasksGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        }
+
+        private void RefreshTasksViewSafe()
+        {
+            if (_tasksView is IEditableCollectionView editable)
+            {
+                if (editable.IsAddingNew)
+                {
+                    editable.CommitNew();
+                }
+                if (editable.IsEditingItem)
+                {
+                    editable.CommitEdit();
+                }
+            }
+            _tasksView?.Refresh();
         }
 
         private class DueDateGroupConverter : IValueConverter
@@ -672,6 +749,205 @@ namespace TodoWpfApp
             {
                 EnsureHistoryEntry(task);
             }
+        }
+
+        private void InitializeNotificationIndicator()
+        {
+            if (NotificationsButton == null)
+            {
+                return;
+            }
+
+            _notificationDefaultBackground = NotificationsButton.Background;
+            _notificationDefaultForeground = NotificationsButton.Foreground;
+            _notificationFlashTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(500)
+            };
+            _notificationFlashTimer.Tick += (_, _) =>
+            {
+                if (!_notifications.Any(n => !n.Read))
+                {
+                    StopNotificationFlashingInternal();
+                    return;
+                }
+
+                _notificationFlashOn = !_notificationFlashOn;
+                if (_notificationFlashOn)
+                {
+                    NotificationsButton.Background = Brushes.Gold;
+                    NotificationsButton.Foreground = Brushes.Black;
+                }
+                else
+                {
+                    NotificationsButton.Background = _notificationDefaultBackground;
+                    NotificationsButton.Foreground = _notificationDefaultForeground;
+                }
+            };
+            UpdateNotificationIndicator();
+        }
+
+        private void UpdateNotificationIndicator()
+        {
+            if (NotificationsButton == null)
+            {
+                return;
+            }
+
+            var unreadCount = _notifications.Count(n => !n.Read);
+            NotificationsButton.Content = unreadCount > 0 ? $"Notifications ({unreadCount})" : "Notifications";
+
+            if (unreadCount > 0)
+            {
+                StartNotificationFlashing();
+            }
+            else
+            {
+                StopNotificationFlashingInternal();
+            }
+        }
+
+        private void StartNotificationFlashing()
+        {
+            if (_notificationFlashTimer == null)
+            {
+                return;
+            }
+
+            if (!_notificationFlashTimer.IsEnabled)
+            {
+                _notificationFlashTimer.Start();
+            }
+        }
+
+        private void StopNotificationFlashingInternal()
+        {
+            if (_notificationFlashTimer == null)
+            {
+                return;
+            }
+
+            if (_notificationFlashTimer.IsEnabled)
+            {
+                _notificationFlashTimer.Stop();
+            }
+
+            _notificationFlashOn = false;
+            if (NotificationsButton != null)
+            {
+                NotificationsButton.Background = _notificationDefaultBackground;
+                NotificationsButton.Foreground = _notificationDefaultForeground;
+            }
+        }
+
+        private void AddNotificationFromTask(TaskItem task)
+        {
+            if (!task.DueDate.HasValue)
+            {
+                return;
+            }
+
+            var now = DateTime.Now;
+            var existing = _notifications.FirstOrDefault(n => n.TaskId == task.Id && n.DueDate == task.DueDate);
+            if (existing != null)
+            {
+                if (existing.SnoozedUntil.HasValue && existing.SnoozedUntil.Value > now)
+                {
+                    return;
+                }
+
+                if (!existing.Read)
+                {
+                    return;
+                }
+
+                existing.Message = $"'{task.Title}' is due by {task.DueDate.Value:g}.";
+                existing.CreatedAt = now;
+                existing.Read = false;
+                existing.SnoozedUntil = null;
+            }
+            else
+            {
+                _notifications.Add(new NotificationItem
+                {
+                    TaskId = task.Id,
+                    TaskTitle = task.Title,
+                    Message = $"'{task.Title}' is due by {task.DueDate.Value:g}.",
+                    DueDate = task.DueDate,
+                    CreatedAt = now,
+                    Read = false
+                });
+            }
+
+            SaveNotifications();
+            UpdateNotificationIndicator();
+        }
+
+        private void LoadNotifications()
+        {
+            _notifications.Clear();
+            var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, NotificationsFile);
+            try
+            {
+                if (!File.Exists(filePath))
+                {
+                    return;
+                }
+
+                var json = File.ReadAllText(filePath);
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var loaded = JsonSerializer.Deserialize<List<NotificationItem>>(json, options);
+                if (loaded != null)
+                {
+                    foreach (var item in loaded)
+                    {
+                        _notifications.Add(item);
+                    }
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
+        private void SaveNotifications()
+        {
+            try
+            {
+                var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, NotificationsFile);
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                var json = JsonSerializer.Serialize(_notifications.ToList(), options);
+                File.WriteAllText(filePath, json);
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
+        private void OpenTaskById(Guid taskId)
+        {
+            var task = _tasks.FirstOrDefault(t => t.Id == taskId);
+            if (task == null)
+            {
+                MessageBox.Show("Task not found.");
+                return;
+            }
+
+            if (_tasksView != null)
+            {
+                var inView = _tasksView.Cast<TaskItem>().Any(t => t.Id == taskId);
+                if (!inView)
+                {
+                    MessageBox.Show("Task is currently filtered out. Adjust filters to view it.");
+                    return;
+                }
+            }
+
+            TasksGrid.SelectedItem = task;
+            TasksGrid.ScrollIntoView(task);
+            UpdateDetails();
         }
     }
 }

@@ -3,23 +3,29 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:TodoWpfApp"
         xmlns:models="clr-namespace:TodoWpfApp.Models"
-        Title="Enhanced To-Do List" Height="800" Width="1100" MinHeight="600" MinWidth="900">
+        Icon="/ChatGPT Image Jan 29, 2026, 02_10_29 PM.png"
+        Title="To-Do 2.0" Height="800" Width="1100" MinHeight="600" MinWidth="900">
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="119*"/>
+            <ColumnDefinition Width="557*"/>
+            <ColumnDefinition Width="424*"/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Control bar split across two rows so buttons and filters always fit without horizontal scrolling -->
-        <Border Grid.Row="0" Padding="10" Background="{DynamicResource SecondaryBackgroundBrush}">
+        <Border Grid.Row="0" Padding="10" Background="{DynamicResource SecondaryBackgroundBrush}" Grid.ColumnSpan="3" Margin="0,0,0,352">
             <StackPanel>
                 <WrapPanel VerticalAlignment="Center" Margin="0,0,0,6" ItemWidth="120" ItemHeight="32">
                     <Button x:Name="AddButton" Content="Add Task" Margin="2" Click="AddButton_Click"/>
                     <Button x:Name="EditButton" Content="Edit Task" Margin="2" Click="EditButton_Click"/>
                     <Button x:Name="CompleteButton" Content="Mark Complete" Margin="2" Click="CompleteButton_Click"/>
                     <Button x:Name="DeleteButton" Content="Delete Task" Margin="2" Click="DeleteButton_Click"/>
-                    <Button x:Name="CalendarButton" Content="Calendar View" Margin="2" Click="CalendarButton_Click"/>
                     <Button x:Name="HistoryButton" Content="History Report" Margin="2" Click="HistoryButton_Click"/>
+                    <Button x:Name="NotificationsButton" Content="Notifications" Margin="2" Click="NotificationsButton_Click"/>
                 </WrapPanel>
                 <WrapPanel VerticalAlignment="Center" ItemHeight="32">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="2">
@@ -58,13 +64,13 @@
         </Border>
 
         <!-- Main content area keeps grid and details side by side to utilise full width -->
-        <Grid Grid.Row="1" Margin="5">
+        <Grid Margin="5,95,5,5" Grid.ColumnSpan="3" Grid.RowSpan="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <DataGrid x:Name="TasksGrid" Grid.Column="0" AutoGenerateColumns="False" Margin="0,0,5,0" SelectionMode="Single" SelectionChanged="TasksGrid_SelectionChanged" CanUserSortColumns="True">
+            <DataGrid x:Name="TasksGrid" Grid.Column="0" AutoGenerateColumns="False" Margin="0,0,5,0" SelectionMode="Single" SelectionChanged="TasksGrid_SelectionChanged" CanUserSortColumns="True"  MouseDoubleClick="TasksGrid_MouseDoubleClick">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Title" Binding="{Binding Title}" SortMemberPath="Title" Width="2*"/>
                     <DataGridTextColumn Header="Due Date" Binding="{Binding DueDate, StringFormat=d}" SortMemberPath="DueDate" Width="*"/>
@@ -112,14 +118,25 @@
                                             <TextBlock Text="{Binding Title}" Margin="5,0,0,0"/>
                                         </StackPanel>
                                         <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,2,0,0"/>
-                                        <TextBlock Text="Attachments:" FontWeight="Bold" Margin="0,6,0,2"/>
-                                        <ItemsControl ItemsSource="{Binding Attachments}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding}" Foreground="Blue" TextDecorations="Underline" Cursor="Hand" Margin="0,0,0,2" MouseLeftButtonUp="SubtaskAttachment_Click" />
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                        <StackPanel Margin="0,6,0,0">
+                                            <StackPanel.Style>
+                                                <Style TargetType="StackPanel">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Attachments.Count}" Value="0">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </StackPanel.Style>
+                                            <TextBlock Text="Attachments:" FontWeight="Bold" Margin="0,0,0,2"/>
+                                            <ItemsControl ItemsSource="{Binding Attachments}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding}" Foreground="Blue" TextDecorations="Underline" Cursor="Hand" Margin="0,0,0,2" MouseLeftButtonUp="SubtaskAttachment_Click" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
                                     </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
