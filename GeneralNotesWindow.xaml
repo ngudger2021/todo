@@ -1,0 +1,81 @@
+<Window x:Class="TodoWpfApp.GeneralNotesWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="General Notes" Height="600" Width="800"
+        WindowStartupLocation="CenterOwner">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Notes List -->
+        <Border Grid.Column="0" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="0,0,1,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Toolbar -->
+                <Border Grid.Row="0" Padding="10" Background="{DynamicResource SecondaryBackgroundBrush}">
+                    <StackPanel>
+                        <Button x:Name="AddNoteButton" Content="+ New Note" Click="AddNoteButton_Click" Margin="0,0,0,5"/>
+                        <Button x:Name="DeleteNoteButton" Content="Delete Note" Click="DeleteNoteButton_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Notes List -->
+                <ListBox x:Name="NotesListBox" Grid.Row="1" SelectionChanged="NotesListBox_SelectionChanged"
+                         Background="{DynamicResource PrimaryBackgroundBrush}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="5">
+                                <TextBlock Text="{Binding Title}" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding ModifiedAt, StringFormat='Modified: {0:g}'}"
+                                          FontSize="10" Foreground="{DynamicResource SecondaryForegroundBrush}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+
+        <!-- Note Editor -->
+        <Grid Grid.Column="1" Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="120"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0">
+                <TextBlock Text="Title:" Margin="0,0,0,5"/>
+                <TextBox x:Name="TitleTextBox" Margin="0,0,0,15" TextChanged="TitleTextBox_TextChanged"/>
+
+                <DockPanel Margin="0,0,0,5">
+                    <TextBlock Text="Content:" DockPanel.Dock="Left"/>
+                    <CheckBox x:Name="ContentMarkdownCheckBox"
+                              Content="Use Markdown"
+                              Margin="10,0,0,0"
+                              VerticalAlignment="Center"
+                              Checked="ContentMarkdownCheckBox_Changed"
+                              Unchecked="ContentMarkdownCheckBox_Changed"/>
+                </DockPanel>
+            </StackPanel>
+
+            <TextBox x:Name="ContentTextBox" Grid.Row="1"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto"
+                     TextChanged="ContentTextBox_TextChanged"/>
+
+            <FlowDocumentScrollViewer x:Name="ContentMarkdownPreview" Grid.Row="2" Margin="0,10,0,0" Visibility="Collapsed"/>
+
+            <TextBlock x:Name="StatusTextBlock" Grid.Row="3" Margin="0,10,0,0"
+                       Foreground="{DynamicResource SecondaryForegroundBrush}"
+                       FontSize="11"/>
+        </Grid>
+    </Grid>
+</Window>

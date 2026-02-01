@@ -90,12 +90,19 @@ namespace TodoWpfApp
                         }
                     }
                 }
+
+                // Load note
+                NoteTextBox.Text = task.Note;
+                NoteMarkdownCheckBox.IsChecked = task.NoteIsMarkdown;
+                UpdateNotePreview();
             }
             else
             {
                 Title = "Add Task";
                 PriorityComboBox.SelectedIndex = 1;
                 TagsTextBox.Text = string.Empty;
+                NoteTextBox.Text = string.Empty;
+                NoteMarkdownCheckBox.IsChecked = true;
             }
             AttachmentsListBox.ItemsSource = _attachmentDisplay;
             SubtasksListBox.ItemsSource = _subTasks;
@@ -258,6 +265,8 @@ namespace TodoWpfApp
                 _existingTask.Attachments = attachmentsDest;
                 _existingTask.SubTasks = newSubTasks;
                 _existingTask.Tags = tags;
+                _existingTask.Note = NoteTextBox.Text.Trim();
+                _existingTask.NoteIsMarkdown = NoteMarkdownCheckBox.IsChecked == true;
                 _existingTask.Recurrence = BuildRecurrenceRule();
                 _existingTask.DependsOn = new List<Guid>(_dependencies);
             }
@@ -275,6 +284,8 @@ namespace TodoWpfApp
                     Attachments = attachmentsDest,
                     SubTasks = newSubTasks,
                     Tags = tags,
+                    Note = NoteTextBox.Text.Trim(),
+                    NoteIsMarkdown = NoteMarkdownCheckBox.IsChecked == true,
                     Recurrence = BuildRecurrenceRule(),
                     DependsOn = new List<Guid>(_dependencies)
                 };
@@ -432,6 +443,31 @@ namespace TodoWpfApp
                 Type = (RecurrenceType)selectedIndex,
                 Interval = interval
             };
+        }
+
+        private void NoteMarkdownCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            UpdateNotePreview();
+        }
+
+        private void NoteTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            UpdateNotePreview();
+        }
+
+        private void UpdateNotePreview()
+        {
+            if (NoteMarkdownPreview == null || NoteMarkdownCheckBox == null || NoteTextBox == null)
+            {
+                return;
+            }
+
+            bool isMarkdown = NoteMarkdownCheckBox.IsChecked == true;
+            NoteMarkdownPreview.Visibility = isMarkdown ? Visibility.Visible : Visibility.Collapsed;
+            if (isMarkdown)
+            {
+                NoteMarkdownPreview.Document = MarkdownRenderer.ToFlowDocument(NoteTextBox.Text);
+            }
         }
 
     }

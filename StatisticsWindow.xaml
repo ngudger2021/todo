@@ -1,0 +1,192 @@
+<Window x:Class="TodoWpfApp.StatisticsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Task Statistics" Height="700" Width="900"
+        WindowStartupLocation="CenterOwner"
+        Icon="/ChatGPT Image Jan 29, 2026, 02_10_29 PM.png">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <TextBlock Grid.Row="0" Text="Task Statistics Dashboard" FontSize="24" FontWeight="Bold"
+                       Margin="0,0,0,20"/>
+
+            <!-- Overall Statistics -->
+            <GroupBox Grid.Row="1" Header="Overall Statistics" Margin="0,0,0,15">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="5">
+                        <TextBlock Text="Total Tasks" FontWeight="Bold" FontSize="12"/>
+                        <TextBlock x:Name="TotalTasksText" Text="0" FontSize="32" Foreground="#2196F3"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="5">
+                        <TextBlock Text="Completed Tasks" FontWeight="Bold" FontSize="12"/>
+                        <TextBlock x:Name="CompletedTasksText" Text="0" FontSize="32" Foreground="#4CAF50"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="5">
+                        <TextBlock Text="Pending Tasks" FontWeight="Bold" FontSize="12"/>
+                        <TextBlock x:Name="PendingTasksText" Text="0" FontSize="32" Foreground="#FF9800"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="5">
+                        <TextBlock Text="Completion Rate" FontWeight="Bold" FontSize="12"/>
+                        <TextBlock x:Name="CompletionRateText" Text="0%" FontSize="32" Foreground="#9C27B0"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="5">
+                        <TextBlock Text="Avg. Time to Complete" FontWeight="Bold" FontSize="12"/>
+                        <TextBlock x:Name="AvgTimeText" Text="N/A" FontSize="24" Foreground="#607D8B"/>
+                    </StackPanel>
+
+                </Grid>
+            </GroupBox>
+
+            <!-- Status Breakdown -->
+            <GroupBox Grid.Row="2" Header="Tasks by Status" Margin="0,0,0,15">
+                <StackPanel Margin="10">
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="60"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="New" VerticalAlignment="Center" FontWeight="Bold"/>
+                        <ProgressBar Grid.Column="1" x:Name="NewStatusBar" Height="25" Margin="10,0"
+                                   Minimum="0" Maximum="100" Background="#EEE"/>
+                        <TextBlock Grid.Column="2" x:Name="NewStatusText" Text="0" VerticalAlignment="Center" FontSize="14"/>
+                    </Grid>
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="60"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="In Progress" VerticalAlignment="Center" FontWeight="Bold"/>
+                        <ProgressBar Grid.Column="1" x:Name="InProgressStatusBar" Height="25" Margin="10,0"
+                                   Minimum="0" Maximum="100" Background="#EEE"/>
+                        <TextBlock Grid.Column="2" x:Name="InProgressStatusText" Text="0" VerticalAlignment="Center" FontSize="14"/>
+                    </Grid>
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="60"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="On Hold" VerticalAlignment="Center" FontWeight="Bold"/>
+                        <ProgressBar Grid.Column="1" x:Name="OnHoldStatusBar" Height="25" Margin="10,0"
+                                   Minimum="0" Maximum="100" Background="#EEE"/>
+                        <TextBlock Grid.Column="2" x:Name="OnHoldStatusText" Text="0" VerticalAlignment="Center" FontSize="14"/>
+                    </Grid>
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="60"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Complete" VerticalAlignment="Center" FontWeight="Bold"/>
+                        <ProgressBar Grid.Column="1" x:Name="CompleteStatusBar" Height="25" Margin="10,0"
+                                   Minimum="0" Maximum="100" Background="#EEE"/>
+                        <TextBlock Grid.Column="2" x:Name="CompleteStatusText" Text="0" VerticalAlignment="Center" FontSize="14"/>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Priority Breakdown -->
+            <GroupBox Grid.Row="3" Header="Tasks by Priority" Margin="0,0,0,15">
+                <StackPanel Margin="10">
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="60"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="High Priority" VerticalAlignment="Center" FontWeight="Bold"/>
+                        <ProgressBar Grid.Column="1" x:Name="HighPriorityBar" Height="25" Margin="10,0"
+                                   Minimum="0" Maximum="100" Background="#FFE0E0"/>
+                        <TextBlock Grid.Column="2" x:Name="HighPriorityText" Text="0" VerticalAlignment="Center" FontSize="14"/>
+                    </Grid>
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="60"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Medium Priority" VerticalAlignment="Center" FontWeight="Bold"/>
+                        <ProgressBar Grid.Column="1" x:Name="MediumPriorityBar" Height="25" Margin="10,0"
+                                   Minimum="0" Maximum="100" Background="#FFF4E0"/>
+                        <TextBlock Grid.Column="2" x:Name="MediumPriorityText" Text="0" VerticalAlignment="Center" FontSize="14"/>
+                    </Grid>
+                    <Grid Margin="0,5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="60"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Low Priority" VerticalAlignment="Center" FontWeight="Bold"/>
+                        <ProgressBar Grid.Column="1" x:Name="LowPriorityBar" Height="25" Margin="10,0"
+                                   Minimum="0" Maximum="100" Background="#E0F4E0"/>
+                        <TextBlock Grid.Column="2" x:Name="LowPriorityText" Text="0" VerticalAlignment="Center" FontSize="14"/>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Tag Statistics -->
+            <GroupBox Grid.Row="4" Header="Tasks by Tag (Top 10)" Margin="0,0,0,15">
+                <ItemsControl x:Name="TagStatsList" Margin="10">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="60"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding TagName}" VerticalAlignment="Center"/>
+                                <ProgressBar Grid.Column="1" Height="20" Margin="10,0" Minimum="0" Maximum="100"
+                                           Value="{Binding Percentage}" Foreground="#2196F3"/>
+                                <TextBlock Grid.Column="2" Text="{Binding Count}" VerticalAlignment="Center"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </GroupBox>
+
+            <!-- Productivity Trend -->
+            <GroupBox Grid.Row="5" Header="Productivity Trend (Last 7 Days)" Margin="0,0,0,15">
+                <Canvas x:Name="TrendCanvas" Height="200" Margin="10" Background="#F5F5F5"/>
+            </GroupBox>
+
+            <!-- Additional Stats -->
+            <GroupBox Grid.Row="6" Header="Additional Metrics" Margin="0,0,0,0">
+                <StackPanel Margin="10">
+                    <TextBlock x:Name="OverdueTasksText" Text="Overdue Tasks: 0" Margin="0,5"/>
+                    <TextBlock x:Name="DueTodayText" Text="Due Today: 0" Margin="0,5"/>
+                    <TextBlock x:Name="DueThisWeekText" Text="Due This Week: 0" Margin="0,5"/>
+                    <TextBlock x:Name="RecurringTasksText" Text="Recurring Tasks: 0" Margin="0,5"/>
+                    <TextBlock x:Name="TasksWithDependenciesText" Text="Tasks with Dependencies: 0" Margin="0,5"/>
+                </StackPanel>
+            </GroupBox>
+        </Grid>
+    </ScrollViewer>
+</Window>

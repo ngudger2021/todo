@@ -26,9 +26,13 @@ namespace TodoWpfApp
     /// </summary>
     public partial class MainWindow : Window
     {
+        private static readonly string[] StatusTags = { "New", "In Progress", "On Hold", "Complete" };
         private readonly ObservableCollection<TaskItem> _tasks = new();
         private readonly ObservableCollection<TaskHistoryEntry> _taskHistory = new();
+        private readonly ObservableCollection<KanbanColumn> _kanbanColumns = new();
+        private readonly ObservableCollection<GeneralNote> _generalNotes = new();
         private ICollectionView? _tasksView;
+        private KanbanBoardView? _kanbanBoardView;
         private const string DataFile = "todo_data.json";
         private const string AttachmentsDir = "attachments";
         private const string SettingsFile = "user_settings.json";
@@ -40,7 +44,6 @@ namespace TodoWpfApp
         private bool _notificationFlashOn;
         private Brush? _notificationDefaultBackground;
         private Brush? _notificationDefaultForeground;
-        private ISyncService? _syncService;
         private SpeechRecognitionEngine? _speechRecognizer;
         private bool _isListening = false;
         private TaskItem? _draggedTask;
@@ -51,6 +54,7 @@ namespace TodoWpfApp
         public MainWindow()
         {
             InitializeComponent();
+            Loaded += MainWindow_Loaded;
             // Ensure attachments directory exists
             Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AttachmentsDir));
             // Load tasks from disk
@@ -72,9 +76,13 @@ namespace TodoWpfApp
             ApplyReminderSettingsToUi();
             LoadNotifications();
             InitializeNotificationIndicator();
-            InitializeSyncService();
             InitializeKeyboardCommands();
             InitializeSpeechRecognition();
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            ApplyViewMode();
         }
 
         private void TasksGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -107,6 +115,7 @@ namespace TodoWpfApp
         internal void SaveTasksAndRefresh()
         {
             SyncHistoryMetadata();
+            EnsureStatusTags();
             SaveTasks();
             RefreshTasksViewSafe();
             UpdateDetails();
@@ -189,6 +198,22 @@ namespace TodoWpfApp
                             _taskHistory.Add(entry);
                         }
                     }
+                    if (container.KanbanColumns != null)
+                    {
+                        _kanbanColumns.Clear();
+                        foreach (var column in container.KanbanColumns)
+                        {
+                            _kanbanColumns.Add(column);
+                        }
+                    }
+                    if (container.GeneralNotes != null)
+                    {
+                        _generalNotes.Clear();
+                        foreach (var note in container.GeneralNotes)
+                        {
+                            _generalNotes.Add(note);
+                        }
+                    }
                 }
                 else
                 {
@@ -249,7 +274,9 @@ namespace TodoWpfApp
                 var container = new TaskDataContainer
                 {
                     Tasks = _tasks.ToList(),
-                    History = _taskHistory.ToList()
+                    History = _taskHistory.ToList(),
+                    KanbanColumns = _kanbanColumns.ToList(),
+                    GeneralNotes = _generalNotes.ToList()
                 };
                 string json = JsonSerializer.Serialize(container, options);
                 File.WriteAllText(filePath, json);
@@ -335,6 +362,14 @@ namespace TodoWpfApp
             if (TasksGrid.SelectedItem is not TaskItem task)
             {
                 DescriptionText.Text = string.Empty;
+                NoteText.Text = string.Empty;
+                var noteMarkdownView = GetNoteMarkdownView();
+                if (noteMarkdownView != null)
+                {
+                    noteMarkdownView.Document = MarkdownRenderer.ToFlowDocument(string.Empty);
+                    noteMarkdownView.Visibility = Visibility.Collapsed;
+                }
+                NoteText.Visibility = Visibility.Visible;
                 AttachmentsPanel.Children.Clear();
                 TagsPanel.Children.Clear();
                 SubtasksDetailsPanel.ItemsSource = null;
@@ -343,6 +378,24 @@ namespace TodoWpfApp
             // Description
             string description = string.IsNullOrWhiteSpace(task.Description) ? "No description" : task.Description;
             DescriptionText.Text = description;
+            // Note
+            string note = string.IsNullOrWhiteSpace(task.Note) ? "No note" : task.Note;
+            var noteMarkdown = GetNoteMarkdownView();
+            if (task.NoteIsMarkdown && noteMarkdown != null)
+            {
+                noteMarkdown.Document = MarkdownRenderer.ToFlowDocument(note);
+                noteMarkdown.Visibility = Visibility.Visible;
+                NoteText.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                NoteText.Text = note;
+                NoteText.Visibility = Visibility.Visible;
+                if (noteMarkdown != null)
+                {
+                    noteMarkdown.Visibility = Visibility.Collapsed;
+                }
+            }
             // Attachments
             AttachmentsPanel.Children.Clear();
             if (task.Attachments.Count > 0)
@@ -766,6 +819,47 @@ namespace TodoWpfApp
             }
         }
 
+        private FlowDocumentScrollViewer? GetNoteMarkdownView()
+        {
+            return FindName("NoteMarkdownView") as FlowDocumentScrollViewer;
+        }
+
+        private void EnsureStatusTags()
+        {
+            foreach (var task in _tasks)
+            {
+                var status = GetStatusTag(task);
+                if (task.Completed)
+                {
+                    if (!string.Equals(status, "Complete", StringComparison.OrdinalIgnoreCase))
+                    {
+                        SetStatusTag(task, "Complete");
+                    }
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(status))
+                {
+                    SetStatusTag(task, "New");
+                }
+                else if (string.Equals(status, "Complete", StringComparison.OrdinalIgnoreCase))
+                {
+                    SetStatusTag(task, "New");
+                }
+            }
+        }
+
+        private static string? GetStatusTag(TaskItem task)
+        {
+            return task.Tags.FirstOrDefault(t => StatusTags.Any(s => string.Equals(s, t, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        private static void SetStatusTag(TaskItem task, string newStatus)
+        {
+            task.Tags.RemoveAll(t => StatusTags.Any(s => string.Equals(s, t, StringComparison.OrdinalIgnoreCase)));
+            task.Tags.Add(newStatus);
+        }
+
         private void InitializeNotificationIndicator()
         {
             if (NotificationsButton == null)
@@ -1089,111 +1183,6 @@ namespace TodoWpfApp
 
         #endregion
 
-        #region Pomodoro Timer
-
-        private void PomodoroButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (TasksGrid.SelectedItem is not TaskItem task)
-            {
-                MessageBox.Show("Please select a task to start a Pomodoro session.");
-                return;
-            }
-
-            var pomodoroWindow = new PomodoroWindow(task, () =>
-            {
-                SaveTasks();
-                _tasksView?.Refresh();
-            });
-            pomodoroWindow.Owner = this;
-            pomodoroWindow.Show();
-        }
-
-        #endregion
-
-        #region Gantt Chart
-
-        private void GanttButton_Click(object sender, RoutedEventArgs e)
-        {
-            var ganttWindow = new GanttChartWindow(_tasks);
-            ganttWindow.Owner = this;
-            ganttWindow.Show();
-        }
-
-        #endregion
-
-        #region Cloud Sync
-
-        private void InitializeSyncService()
-        {
-            string dataPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DataFile);
-            _syncService = new FileSyncService(dataPath);
-        }
-
-        private async void SyncButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_syncService == null)
-            {
-                MessageBox.Show("Sync service is not initialized.");
-                return;
-            }
-
-            if (!_syncService.IsSyncConfigured())
-            {
-                // Show configuration dialog
-                var folderDialog = new System.Windows.Forms.FolderBrowserDialog
-                {
-                    Description = "Select sync folder (e.g., OneDrive, Dropbox folder)",
-                    ShowNewFolderButton = true
-                };
-
-                if (folderDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-                {
-                    _syncService.SetSyncFolder(folderDialog.SelectedPath);
-                }
-                else
-                {
-                    return;
-                }
-            }
-
-            SyncButton.IsEnabled = false;
-            SyncButton.Content = "Syncing...";
-
-            try
-            {
-                var result = await _syncService.SyncAsync();
-
-                if (result.Success)
-                {
-                    MessageBox.Show(result.Message, "Sync Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                    // Reload if data was downloaded
-                    if (result.Action == SyncAction.DownloadedFromRemote || result.Action == SyncAction.Merged)
-                    {
-                        LoadTasks();
-                        _tasksView?.Refresh();
-                        UpdateDetails();
-                        RefreshTagFilterOptions();
-                    }
-                }
-                else
-                {
-                    MessageBox.Show(result.Message, "Sync Failed", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Sync error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            finally
-            {
-                SyncButton.IsEnabled = true;
-                SyncButton.Content = "Sync";
-            }
-        }
-
-        #endregion
-
         #region Export
 
         private void ExportButton_Click(object sender, RoutedEventArgs e)
@@ -1291,6 +1280,54 @@ namespace TodoWpfApp
             // Commands are bound in XAML, but we need to provide implementations
             this.CommandBindings.Add(new CommandBinding(ApplicationCommands.New, (s, e) => AddButton_Click(s, e)));
             this.CommandBindings.Add(new CommandBinding(ApplicationCommands.Delete, (s, e) => DeleteButton_Click(s, e)));
+        }
+
+        private void GeneralNotesButton_Click(object sender, RoutedEventArgs e)
+        {
+            var notesWindow = new GeneralNotesWindow(_generalNotes, SaveTasks);
+            notesWindow.Owner = this;
+            notesWindow.Show();
+        }
+
+        private void ViewMode_Changed(object sender, RoutedEventArgs e)
+        {
+            ApplyViewMode();
+        }
+
+        private void ApplyViewMode()
+        {
+            if (MainFormView == null || KanbanBoardContainer == null)
+            {
+                return;
+            }
+
+            if (MainFormViewRadio?.IsChecked == true)
+            {
+                // Show main form view
+                MainFormView.Visibility = Visibility.Visible;
+                KanbanBoardContainer.Visibility = Visibility.Collapsed;
+
+                // Refresh the collection view to reflect any changes from Kanban
+                _tasksView?.Refresh();
+            }
+            else if (KanbanViewRadio?.IsChecked == true)
+            {
+                // Show Kanban board view
+                MainFormView.Visibility = Visibility.Collapsed;
+                KanbanBoardContainer.Visibility = Visibility.Visible;
+
+                // Initialize or refresh Kanban board
+                if (_kanbanBoardView == null)
+                {
+                    _kanbanBoardView = new KanbanBoardView(_tasks, _kanbanColumns, SaveTasksAndRefresh);
+                    KanbanBoardContainer.Child = _kanbanBoardView;
+                }
+                else
+                {
+                    // Refresh the board to show any changes made in main form
+                    _kanbanBoardView.RefreshBoard();
+                }
+            }
         }
 
         private void HelpButton_Click(object sender, RoutedEventArgs e)

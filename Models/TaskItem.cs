@@ -22,7 +22,9 @@ namespace TodoWpfApp.Models
         private DateTime? _completedAt;
         private List<string> _tags = new();
         private int _sortOrder;
-        private int _completedPomodoros;
+        private Guid? _columnId;
+        private string _note = string.Empty;
+        private bool _noteIsMarkdown;
 
         [JsonPropertyName("id")]
         public Guid Id { get; set; } = Guid.NewGuid();
@@ -47,16 +49,44 @@ namespace TodoWpfApp.Models
         [JsonPropertyName("depends_on")]
         public List<Guid> DependsOn { get; set; } = new();
 
-        [JsonPropertyName("completed_pomodoros")]
-        public int CompletedPomodoros
+        [JsonPropertyName("column_id")]
+        public Guid? ColumnId
         {
-            get => _completedPomodoros;
+            get => _columnId;
             set
             {
-                if (_completedPomodoros != value)
+                if (_columnId != value)
                 {
-                    _completedPomodoros = value;
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CompletedPomodoros)));
+                    _columnId = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ColumnId)));
+                }
+            }
+        }
+
+        [JsonPropertyName("note")]
+        public string Note
+        {
+            get => _note;
+            set
+            {
+                if (_note != value)
+                {
+                    _note = value ?? string.Empty;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Note)));
+                }
+            }
+        }
+
+        [JsonPropertyName("note_is_markdown")]
+        public bool NoteIsMarkdown
+        {
+            get => _noteIsMarkdown;
+            set
+            {
+                if (_noteIsMarkdown != value)
+                {
+                    _noteIsMarkdown = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NoteIsMarkdown)));
                 }
             }
         }

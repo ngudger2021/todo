@@ -3,6 +3,7 @@
     <Color x:Key="PrimaryBackgroundColor">#FF111827</Color>
     <Color x:Key="SecondaryBackgroundColor">#FF1F2937</Color>
     <Color x:Key="PrimaryForegroundColor">#FFF9FAFB</Color>
+    <Color x:Key="SecondaryForegroundColor">#FF9CA3AF</Color>
     <Color x:Key="AccentColor">#FF60A5FA</Color>
     <Color x:Key="AccentForegroundColor">#FFF9FAFB</Color>
     <Color x:Key="ControlBorderColor">#FF374151</Color>
@@ -10,6 +11,7 @@
     <SolidColorBrush x:Key="PrimaryBackgroundBrush" Color="{StaticResource PrimaryBackgroundColor}"/>
     <SolidColorBrush x:Key="SecondaryBackgroundBrush" Color="{StaticResource SecondaryBackgroundColor}"/>
     <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="{StaticResource PrimaryForegroundColor}"/>
+    <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="{StaticResource SecondaryForegroundColor}"/>
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
     <SolidColorBrush x:Key="AccentForegroundBrush" Color="{StaticResource AccentForegroundColor}"/>
     <SolidColorBrush x:Key="ControlBorderBrush" Color="{StaticResource ControlBorderColor}"/>
