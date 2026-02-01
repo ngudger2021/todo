@@ -21,9 +21,75 @@ namespace TodoWpfApp.Models
         private DateTime _createdAt = DateTime.Now.ToLocalTime();
         private DateTime? _completedAt;
         private List<string> _tags = new();
+        private int _sortOrder;
+        private Guid? _columnId;
+        private string _note = string.Empty;
+        private bool _noteIsMarkdown;
 
         [JsonPropertyName("id")]
         public Guid Id { get; set; } = Guid.NewGuid();
+
+        [JsonPropertyName("sort_order")]
+        public int SortOrder
+        {
+            get => _sortOrder;
+            set
+            {
+                if (_sortOrder != value)
+                {
+                    _sortOrder = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SortOrder)));
+                }
+            }
+        }
+
+        [JsonPropertyName("recurrence")]
+        public RecurrenceRule? Recurrence { get; set; }
+
+        [JsonPropertyName("depends_on")]
+        public List<Guid> DependsOn { get; set; } = new();
+
+        [JsonPropertyName("column_id")]
+        public Guid? ColumnId
+        {
+            get => _columnId;
+            set
+            {
+                if (_columnId != value)
+                {
+                    _columnId = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ColumnId)));
+                }
+            }
+        }
+
+        [JsonPropertyName("note")]
+        public string Note
+        {
+            get => _note;
+            set
+            {
+                if (_note != value)
+                {
+                    _note = value ?? string.Empty;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Note)));
+                }
+            }
+        }
+
+        [JsonPropertyName("note_is_markdown")]
+        public bool NoteIsMarkdown
+        {
+            get => _noteIsMarkdown;
+            set
+            {
+                if (_noteIsMarkdown != value)
+                {
+                    _noteIsMarkdown = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NoteIsMarkdown)));
+                }
+            }
+        }
 
         [JsonPropertyName("title")]
         public string Title

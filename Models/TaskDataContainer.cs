@@ -10,5 +10,11 @@ namespace TodoWpfApp.Models
 
         [JsonPropertyName("history")]
         public List<TaskHistoryEntry> History { get; set; } = new();
+
+        [JsonPropertyName("kanban_columns")]
+        public List<KanbanColumn> KanbanColumns { get; set; } = new();
+
+        [JsonPropertyName("general_notes")]
+        public List<GeneralNote> GeneralNotes { get; set; } = new();
     }
 }
