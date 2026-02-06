@@ -30,7 +30,6 @@
 
   <ItemGroup>
     <!-- System.Speech for voice recognition (NuGet package for .NET) -->
-    <PackageReference Include="ColorCode" Version="2.1.0" />
     <PackageReference Include="Markdig" Version="0.44.0" />
     <PackageReference Include="Markdig.Wpf" Version="0.5.0.1" />
     <PackageReference Include="System.Speech" Version="10.0.2" />

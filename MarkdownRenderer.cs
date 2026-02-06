@@ -38,8 +38,6 @@ namespace TodoWpfApp
             {
                 var parsed = Markdig.Markdown.Parse(markdown, Pipeline);
                 var renderer = new WpfRenderer(doc);
-                renderer.ObjectRenderers.RemoveAll<CodeBlockRenderer>();
-                renderer.ObjectRenderers.Add(new SyntaxHighlightingCodeBlockRenderer());
                 renderer.Render(parsed);
                 AttachHyperlinkHandlers(doc);
                 return doc;
