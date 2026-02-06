@@ -15,6 +15,7 @@ namespace TodoWpfApp.Models
     {
         private string _title = string.Empty;
         private string _description = string.Empty;
+        private bool _descriptionIsMarkdown;
         private DateTime? _dueDate;
         private string _priority = "Medium";
         private bool _completed;
@@ -115,6 +116,20 @@ namespace TodoWpfApp.Models
                 {
                     _description = value;
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Description)));
+                }
+            }
+        }
+
+        [JsonPropertyName("description_is_markdown")]
+        public bool DescriptionIsMarkdown
+        {
+            get => _descriptionIsMarkdown;
+            set
+            {
+                if (_descriptionIsMarkdown != value)
+                {
+                    _descriptionIsMarkdown = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DescriptionIsMarkdown)));
                 }
             }
         }

@@ -162,7 +162,12 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <TextBlock Text="Description:" FontWeight="Bold"/>
-                        <TextBox x:Name="DescriptionText" Margin="0,4,0,10" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" VerticalScrollBarVisibility="Auto"/>
+                        <Grid Margin="0,4,0,10">
+                            <TextBox x:Name="DescriptionText" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" VerticalScrollBarVisibility="Auto"/>
+                            <FlowDocumentScrollViewer x:Name="DescriptionMarkdownView"
+                                                      Visibility="Collapsed"
+                                                      MinHeight="80"/>
+                        </Grid>
                         <TextBlock Text="Note:" FontWeight="Bold"/>
                         <Grid Margin="0,4,0,10">
                             <TextBox x:Name="NoteText"
