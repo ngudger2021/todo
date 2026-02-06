@@ -363,6 +363,13 @@ namespace TodoWpfApp
             {
                 DescriptionText.Text = string.Empty;
                 NoteText.Text = string.Empty;
+                var descriptionMarkdownView = GetDescriptionMarkdownView();
+                if (descriptionMarkdownView != null)
+                {
+                    descriptionMarkdownView.Document = MarkdownRenderer.ToFlowDocument(string.Empty);
+                    descriptionMarkdownView.Visibility = Visibility.Collapsed;
+                }
+                DescriptionText.Visibility = Visibility.Visible;
                 var noteMarkdownView = GetNoteMarkdownView();
                 if (noteMarkdownView != null)
                 {
@@ -377,7 +384,22 @@ namespace TodoWpfApp
             }
             // Description
             string description = string.IsNullOrWhiteSpace(task.Description) ? "No description" : task.Description;
-            DescriptionText.Text = description;
+            var descriptionMarkdown = GetDescriptionMarkdownView();
+            if (task.DescriptionIsMarkdown && descriptionMarkdown != null)
+            {
+                descriptionMarkdown.Document = MarkdownRenderer.ToFlowDocument(description);
+                descriptionMarkdown.Visibility = Visibility.Visible;
+                DescriptionText.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                DescriptionText.Text = description;
+                DescriptionText.Visibility = Visibility.Visible;
+                if (descriptionMarkdown != null)
+                {
+                    descriptionMarkdown.Visibility = Visibility.Collapsed;
+                }
+            }
             // Note
             string note = string.IsNullOrWhiteSpace(task.Note) ? "No note" : task.Note;
             var noteMarkdown = GetNoteMarkdownView();
@@ -822,6 +844,11 @@ namespace TodoWpfApp
         private FlowDocumentScrollViewer? GetNoteMarkdownView()
         {
             return FindName("NoteMarkdownView") as FlowDocumentScrollViewer;
+        }
+
+        private FlowDocumentScrollViewer? GetDescriptionMarkdownView()
+        {
+            return FindName("DescriptionMarkdownView") as FlowDocumentScrollViewer;
         }
 
         private void EnsureStatusTags()

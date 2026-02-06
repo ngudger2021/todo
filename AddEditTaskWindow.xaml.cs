@@ -37,6 +37,7 @@ namespace TodoWpfApp
                 Title = "Edit Task";
                 TitleTextBox.Text = task.Title;
                 DescriptionTextBox.Text = task.Description;
+                DescriptionMarkdownCheckBox.IsChecked = task.DescriptionIsMarkdown;
                 var existingTags = task.Tags ?? new List<string>();
                 TagsTextBox.Text = existingTags.Count == 0 ? string.Empty : string.Join(", ", existingTags);
                 if (task.DueDate.HasValue)
@@ -94,6 +95,7 @@ namespace TodoWpfApp
                 // Load note
                 NoteTextBox.Text = task.Note;
                 NoteMarkdownCheckBox.IsChecked = task.NoteIsMarkdown;
+                UpdateDescriptionPreview();
                 UpdateNotePreview();
             }
             else
@@ -102,6 +104,7 @@ namespace TodoWpfApp
                 PriorityComboBox.SelectedIndex = 1;
                 TagsTextBox.Text = string.Empty;
                 NoteTextBox.Text = string.Empty;
+                DescriptionMarkdownCheckBox.IsChecked = false;
                 NoteMarkdownCheckBox.IsChecked = true;
             }
             AttachmentsListBox.ItemsSource = _attachmentDisplay;
@@ -260,6 +263,7 @@ namespace TodoWpfApp
                 }
                 _existingTask.Title = title;
                 _existingTask.Description = description;
+                _existingTask.DescriptionIsMarkdown = DescriptionMarkdownCheckBox.IsChecked == true;
                 _existingTask.DueDate = dueDate;
                 _existingTask.Priority = priority;
                 _existingTask.Attachments = attachmentsDest;
@@ -277,6 +281,7 @@ namespace TodoWpfApp
                     Id = Guid.NewGuid(),
                     Title = title,
                     Description = description,
+                    DescriptionIsMarkdown = DescriptionMarkdownCheckBox.IsChecked == true,
                     CreatedAt = DateTime.Now,
                     DueDate = dueDate,
                     Priority = priority,
@@ -453,6 +458,31 @@ namespace TodoWpfApp
         private void NoteTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             UpdateNotePreview();
+        }
+
+        private void DescriptionMarkdownCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            UpdateDescriptionPreview();
+        }
+
+        private void DescriptionTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            UpdateDescriptionPreview();
+        }
+
+        private void UpdateDescriptionPreview()
+        {
+            if (DescriptionMarkdownPreview == null || DescriptionMarkdownCheckBox == null || DescriptionTextBox == null)
+            {
+                return;
+            }
+
+            bool isMarkdown = DescriptionMarkdownCheckBox.IsChecked == true;
+            DescriptionMarkdownPreview.Visibility = isMarkdown ? Visibility.Visible : Visibility.Collapsed;
+            if (isMarkdown)
+            {
+                DescriptionMarkdownPreview.Document = MarkdownRenderer.ToFlowDocument(DescriptionTextBox.Text);
+            }
         }
 
         private void UpdateNotePreview()
