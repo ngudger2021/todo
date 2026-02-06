@@ -3,7 +3,8 @@ using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Media;
 using Markdig;
-using Markdig.Wpf;
+using Markdown = Markdig.Wpf.Markdown;
+
 
 namespace TodoWpfApp
 {
